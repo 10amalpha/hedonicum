@@ -142,6 +142,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 <div class="app" id="app"></div>
 <script>
 const API="https://wine-profile.vercel.app/api/analyze";
+const SB_URL="https://bzpraigsuwgjgpnclcpd.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6cHJhaWdzdXdnamdwbmNsY3BkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1Mzk2NDEsImV4cCI6MjA4NTExNTY0MX0.tBtsac6Mq65BiG93MhYtn1KV8iOGpEpVdlD3tqShrzE";
+let cellarWines=null,cellarFilter='all',cellarLoading=false;
+async function loadCellar(){
+if(cellarWines)return;cellarLoading=true;render();
+try{
+const r=await fetch(SB_URL+'/rest/v1/wines?select=*&order=rating.desc,name.asc',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+cellarWines=await r.json();
+}catch(e){cellarWines=[]}
+cellarLoading=false;render()}
+function cellarStats(){
+if(!cellarWines)return{total:231,countries:12,avg:'4.2',grapes:{},regions:{},byCountry:{},byRating:{}};
+const grapes={},regions={},byCountry={},byRating={},countries=new Set();
+cellarWines.forEach(w=>{
+if(w.grape){grapes[w.grape]=(grapes[w.grape]||0)+1}
+if(w.region){regions[w.region]=(regions[w.region]||0)+1}
+if(w.country){byCountry[w.country]=(byCountry[w.country]||0)+1;countries.add(w.country)}
+const rk=String(w.rating);byRating[rk]=(byRating[rk]||0)+1;
+});
+const avg=(cellarWines.reduce((s,w)=>s+w.rating,0)/cellarWines.length).toFixed(1);
+return{total:cellarWines.length,countries:countries.size,avg,grapes,regions,byCountry,byRating}}
 const TASTE=`DINER PATTERN (what unites their 790 favorite venues across 31 countries):
 1. SOUL over concept — chef passion > design. Rintaro, Isolina, Taberna Antonio Sanchez
 2. INGREDIENT-DRIVEN — product is star. Bar Crudo, PPQ Dungeness, Parador La Huella
@@ -359,7 +380,46 @@ h+=`<div style="text-align:center;margin-top:16px"><button class="go" style="bac
 }
 h+=`</div>`}
 
-if(S.tab==='cellar'){h+=`<div class="cel"><h2>Cellar</h2><p class="ch-p">231 wines · 12 countries</p><div class="cel-f">`;['All','Regions','Grapes','Insights'].forEach((f,i)=>{h+=`<button class="cft${i===0?' on':''}">${f}</button>`});h+=`</div>`;[{n:'Alonso del Yerro María Ribera del Duero',m:'Ribera del Duero, Spain · Tempranillo',s:'5.0',t:1},{n:'Bodegas Alvia Ribeira Sacra Mencia',m:'Ribeira Sacra, Spain · Mencia',s:'5.0',t:1},{n:'Bodegas Frontaura Crianza',m:'Toro, Spain · Tempranillo',s:'5.0',t:1},{n:'Caymus Cabernet Sauvignon',m:'Napa Valley, USA · Cabernet Sauvignon',s:'5.0',t:1},{n:'Domaine Tempier Bandol Rosé',m:'Bandol, France · Mourvèdre',s:'4.5'}].forEach((w,i)=>{h+=`<div class="wr" style="animation-delay:${i*.05}s"><div class="wr-i"><div class="wr-n">${w.n}</div><div class="wr-m">${w.m}</div></div><div style="text-align:right"><div class="ws ${w.t?'w5':'w4'}">${w.s}</div>${w.t?'<div class="wt">★ TOP</div>':''}</div></div>`});h+=`</div>`}
+if(S.tab==='cellar'){
+if(!cellarWines&&!cellarLoading)loadCellar();
+const cs=cellarStats();
+h+=`<div class="cel"><h2>Cellar</h2><p class="ch-p">${cs.total} wines · ${cs.countries} countries · avg ${cs.avg}</p><div class="cel-f">`;
+['all','regions','grapes','insights'].forEach(f=>{h+=`<button class="cft${cellarFilter===f?' on':''}" onclick="cellarFilter='${f}';render()">${f[0].toUpperCase()+f.slice(1)}</button>`});
+h+=`</div>`;
+if(cellarLoading){h+=`<div class="ld"><div class="ld-t">Loading cellar...</div></div>`}
+else if(cellarWines){
+if(cellarFilter==='all'){
+cellarWines.forEach((w,i)=>{if(i>50)return;h+=`<div class="wr" style="animation-delay:${Math.min(i*.03,.5)}s"><div class="wr-i"><div class="wr-n">${w.name}</div><div class="wr-m">${w.region||''}${w.grape?' · '+w.grape:''}</div></div><div style="text-align:right"><div class="ws ${w.rating>=5?'w5':'w4'}">${w.rating}</div>${w.rating>=5?'<div class="wt">★ TOP</div>':''}</div></div>`});
+if(cellarWines.length>50)h+=`<div style="text-align:center;padding:12px;color:var(--text-d);font-size:12px">Showing top 50 of ${cellarWines.length}</div>`;
+}
+if(cellarFilter==='regions'){
+const sorted=Object.entries(cs.regions).sort((a,b)=>b[1]-a[1]);
+sorted.forEach((r,i)=>{h+=`<div class="wr" style="animation-delay:${Math.min(i*.03,.4)}s"><div class="wr-i"><div class="wr-n">${r[0]}</div></div><div style="text-align:right"><div class="ws w4">${r[1]}</div><div class="wt">wines</div></div></div>`});
+}
+if(cellarFilter==='grapes'){
+const sorted=Object.entries(cs.grapes).sort((a,b)=>b[1]-a[1]);
+const total=cellarWines.length;
+sorted.forEach((g,i)=>{const pct=Math.round(g[1]/total*100);h+=`<div class="wr" style="animation-delay:${Math.min(i*.03,.4)}s"><div class="wr-i"><div class="wr-n">${g[0]}</div><div class="wr-m"><div style="background:var(--border-d);border-radius:4px;height:4px;margin-top:6px;width:100%"><div style="background:var(--gold);height:4px;border-radius:4px;width:${pct}%"></div></div></div></div><div style="text-align:right"><div class="ws w4">${g[1]}</div><div class="wt">${pct}%</div></div></div>`});
+}
+if(cellarFilter==='insights'){
+const topGrape=Object.entries(cs.grapes).sort((a,b)=>b[1]-a[1])[0];
+const topRegion=Object.entries(cs.regions).sort((a,b)=>b[1]-a[1])[0];
+const topCountry=Object.entries(cs.byCountry).sort((a,b)=>b[1]-a[1])[0];
+const fives=cellarWines.filter(w=>w.rating>=5).length;
+h+=`<div style="padding:4px 0">`;
+const insights=[
+{icon:'🍇',title:'Grape Loyalty',text:topGrape[1]+' of '+cs.total+' wines ('+Math.round(topGrape[1]/cs.total*100)+'%) are <b>'+topGrape[0]+'</b>. You know what you like.'},
+{icon:'📍',title:'Home Region',text:'<b>'+topRegion[0]+'</b> dominates with '+topRegion[1]+' wines. Your palate has a home base.'},
+{icon:'🌍',title:'Top Country',text:'<b>'+topCountry[0]+'</b> leads with '+topCountry[1]+' wines across '+cs.countries+' countries explored.'},
+{icon:'⭐',title:'Standards',text:fives+' perfect 5-star ratings out of '+cs.total+'. You rate '+cs.avg+' on average — generous but discerning.'},
+{icon:'🔥',title:'Tempranillo Loyalist',text:(cs.grapes["Tempranillo"]||0)+' Tempranillos rated — nearly 1 in 3. Spain runs through your veins.'},
+{icon:'🧭',title:'Explorer Index',text:cs.countries+' countries, '+Object.keys(cs.regions).length+' distinct regions. You drink wide but return to where it matters.'}
+];
+insights.forEach((ins,i)=>{h+=`<div class="cv" style="animation:fadeUp .3s ease-out ${i*.06}s both;margin-bottom:10px"><p><span style="font-size:18px;margin-right:6px">${ins.icon}</span><b style="color:var(--text)">${ins.title}</b><br>${ins.text}</p></div>`});
+h+=`</div>`;
+}
+}
+h+=`</div>`}
 
 document.getElementById('app').innerHTML=h;
 const ci=document.getElementById('ci'),li=document.getElementById('li');
