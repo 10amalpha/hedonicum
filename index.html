@@ -97,6 +97,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .scan-cta p{font-size:12px;color:rgba(10,14,23,.6);margin-top:4px}
 .scan-alt{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:14px;cursor:pointer}
 .scan-alt .sa-i{font-size:26px}.scan-alt h3{font-size:15px;font-weight:700}.scan-alt p{font-size:11px;color:var(--text-d);margin-top:2px}
+.scan-photos{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.scan-thumb{width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid var(--border)}
+.scan-thumb-wrap{position:relative}
+.scan-thumb-x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.scan-add-more{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px dashed var(--border);border-radius:10px;color:var(--text-d);font-family:var(--font);font-size:12px;padding:8px 14px;cursor:pointer;margin-bottom:12px}
+.scan-wine{background:var(--bg-card);border:1px solid var(--border-d);border-radius:14px;padding:14px 16px;margin-bottom:8px;animation:fadeUp .3s ease-out both}
+.scan-wine .sw-top{display:flex;justify-content:space-between;align-items:flex-start}
+.scan-wine .sw-name{font-size:14px;font-weight:700;flex:1}
+.scan-wine .sw-score{font-size:22px;font-weight:800;min-width:30px;text-align:right}
+.scan-wine .sw-meta{font-size:11px;color:var(--text-d);margin-top:3px}
+.scan-wine .sw-note{font-size:12px;color:var(--text-m);margin-top:6px;line-height:1.5}
+.scan-wine .sw-pair{font-size:11px;color:var(--green);margin-top:4px}
+.scan-bottle-card{background:var(--bg-card);border:1px solid var(--gold-border);border-radius:16px;padding:20px;animation:fadeUp .4s ease-out}
+.scan-bottle-card h3{font-size:18px;font-weight:800;margin-bottom:2px}
+.scan-bottle-card .sb-winery{font-size:13px;color:var(--gold);font-weight:600}
+.scan-bottle-card .sb-detail{font-size:12px;color:var(--text-d);margin-top:8px;line-height:1.6}
+.scan-bottle-card .sb-notes{font-size:13px;color:var(--text-m);margin-top:10px;line-height:1.6;font-style:italic}
 .cel{padding:32px 20px 20px}.cel h2{font-size:28px;font-weight:800;margin-bottom:2px}.cel .ch-p{color:var(--text-d);font-size:13px;margin-bottom:16px}
 .cel-f{display:flex;gap:6px;margin-bottom:14px}
 .cft{background:transparent;border:1px solid var(--border-d);border-radius:10px;color:var(--text-d);font-family:var(--font);font-size:12px;padding:8px 14px;cursor:pointer;font-weight:500}
@@ -138,7 +155,8 @@ AVOIDS: tourist traps, chains, hotel restaurants, molecular gimmicks, Instagram-
 NIGHTLIFE: neighborhood pubs (206x), craft cocktails (74x), dive bars (34x), natural wine bars (72x)
 LOYALTY REFS: Burma Superstar (Burmese SF 39x), Corks (wine bar Medellin 38x), Rintaro (izakaya SF), Bar Crudo (raw bar SF), Parador La Huella (beach Uruguay), La Carmencita (vermouth Madrid)`;
 
-let S={tab:'profile',city:'',loc:'',vibe:'all',loading:false,phase:'',results:null,error:'',loved:{},rejected:{},toast:''};
+let S={tab:'profile',city:'',loc:'',vibe:'all',loading:false,phase:'',results:null,error:'',loved:{},rejected:{},toast:'',
+scanMode:null,scanPhotos:[],scanLoading:false,scanPhase:'',scanResults:null,scanError:''};
 try{S.loved=JSON.parse(localStorage.getItem('h-loved')||'{}')}catch{}
 try{S.rejected=JSON.parse(localStorage.getItem('h-rej')||'{}')}catch{}
 
@@ -205,6 +223,47 @@ function maps(r){return`https://www.google.com/maps/search/${encodeURIComponent(
 function esc(n){return n.replace(/'/g,"\\'").replace(/"/g,'&quot;')}
 function switchTab(t){S.tab=t;window.scrollTo(0,0);render()}
 
+function scanReset(){S.scanMode=null;S.scanPhotos=[];S.scanLoading=false;S.scanPhase='';S.scanResults=null;S.scanError='';render()}
+function scanAddPhoto(input){
+Array.from(input.files).forEach(f=>{const r=new FileReader();r.onload=e=>{S.scanPhotos.push(e.target.result);render()};r.readAsDataURL(f)});input.value=''}
+function scanRemove(i){S.scanPhotos.splice(i,1);render()}
+async function scanMenu(){
+if(!S.scanPhotos.length||S.scanLoading)return;
+S.scanLoading=true;S.scanError='';S.scanResults=null;S.scanPhase='Reading menu...';render();
+try{
+const content=[];
+S.scanPhotos.forEach(img=>{content.push({type:'image',source:{type:'base64',media_type:img.split(';')[0].split(':')[1],data:img.split(',')[1]}})});
+const pair=document.getElementById('scan-pair')?.value||'';
+content.push({type:'text',text:'Extract ALL wine names from '+(S.scanPhotos.length>1?'these photos':'this photo')+'. Return ONLY a JSON array of wine name strings, nothing else.'});
+const r1=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content}],max_tokens:2000,model:'claude-haiku-4-5-20241022'})});
+const d1=await r1.json();const t1=(d1.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+const names=JSON.parse(t1.replace(/```json|```/g,'').trim());
+if(!names?.length){S.scanError='No wines found on menu';S.scanLoading=false;render();return}
+S.scanPhase='Matching '+names.length+' wines against your cellar...';render();
+const r2=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+system:'You match wine menu items against a diner collection. The diner is a Tempranillo loyalist who rates wines 1-5, prefers Spanish reds, Southern Italian, Uruguayan Tannat, and Italian whites. Respond ONLY with JSON.',
+messages:[{role:'user',content:'Menu wines found:\\n'+names.map((n,i)=>(i+1)+'. '+n).join('\\n')+'\\n\\n'+(pair?'Eating: '+pair+'\\n\\n':'')+'For each wine, determine if it might be in a collection of 231 wines (mostly Spanish, Italian, French, South American). Score each wine 1-10 on how much this diner would enjoy it based on their profile. Return JSON: {"wines":[{"name":"exact menu name","score":8,"known":false,"region":"if identifiable","grape":"if identifiable","note":"1 sentence why this score"'+(pair?',"pairing":"how it pairs with the food"':'')+ '}]}'}],max_tokens:3000,model:'claude-sonnet-4-20250514'})});
+const d2=await r2.json();const t2=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+const c2=t2.replace(/```json|```/g,'').trim();const s=c2.indexOf('{'),e=c2.lastIndexOf('}');
+const parsed=JSON.parse(c2.substring(s,e+1));
+if(parsed?.wines?.length){S.scanResults={wines:parsed.wines.sort((a,b)=>b.score-a.score),pairing:pair}}
+else S.scanError='Could not analyze wines'
+}catch(e){S.scanError='Error: '+e.message}
+S.scanLoading=false;S.scanPhase='';render()}
+
+async function scanBottle(){
+if(!S.scanPhotos.length||S.scanLoading)return;
+S.scanLoading=true;S.scanError='';S.scanResults=null;S.scanPhase='Reading label...';render();
+try{
+const content=[{type:'image',source:{type:'base64',media_type:S.scanPhotos[0].split(';')[0].split(':')[1],data:S.scanPhotos[0].split(',')[1]}},
+{type:'text',text:'Read this wine bottle label. Return ONLY JSON: {"name":"full wine name","winery":"producer","region":"wine region","country":"country","grape":"grape variety if identifiable","vintage":"year if visible","notes":"1-2 sentence tasting character description based on what you know about this wine"}'}];
+const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content}],max_tokens:1000,model:'claude-haiku-4-5-20241022'})});
+const d=await r.json();const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+const c=t.replace(/```json|```/g,'').trim();const s=c.indexOf('{'),e=c.lastIndexOf('}');
+S.scanResults={bottle:JSON.parse(c.substring(s,e+1))}
+}catch(e){S.scanError='Error: '+e.message}
+S.scanLoading=false;S.scanPhase='';render()}
+
 function render(){
 const lc=Object.keys(S.loved).length,rc=Object.keys(S.rejected).length;let h='';
 if(S.toast)h+=`<div class="toast">${S.toast}</div>`;
@@ -242,7 +301,63 @@ if(S.results){h+=`<div class="cv"><p>${S.results.city_vibe}</p></div>`;S.results
 if(!S.loading&&!S.results&&!S.error){h+=`<div class="es"><p>Not where you've been.<br>Where you should go.</p><div class="cp">`;['Tokyo','Lisbon','Buenos Aires','Copenhagen','El Retiro','Barcelona','CDMX','Berlin'].forEach(c=>{h+=`<button class="cpl" onclick="S.city='${c}';render();document.getElementById('ci').value='${c}'">${c}</button>`});h+=`</div></div>`}
 h+=`</div>`}
 
-if(S.tab==='scan'){h+=`<div class="scan"><h2>Scan</h2><p class="sh-p">AI-powered menu intelligence</p><button class="scan-cta"><div class="si">📷</div><h3>Scan Menu</h3><p>Get picks matched to this palate</p></button><div class="scan-alt"><div class="sa-i">🍾</div><div><h3>Add a Bottle</h3><p>Photograph to save &amp; rate</p></div></div></div>`}
+if(S.tab==='scan'){
+h+=`<div class="scan"><h2>Scan</h2><p class="sh-p">AI-powered menu & wine intelligence</p>`;
+if(!S.scanMode&&!S.scanLoading&&!S.scanResults){
+h+=`<button class="scan-cta" onclick="S.scanMode='menu';render()"><div class="si">📷</div><h3>Scan Wine Menu</h3><p>Photograph the list · get picks matched to your palate</p></button>`;
+h+=`<div class="scan-alt" onclick="S.scanMode='bottle';render()"><div class="sa-i">🍾</div><div><h3>Scan a Bottle</h3><p>Photograph label · identify &amp; learn about any wine</p></div></div>`;
+}
+if(S.scanMode==='menu'&&!S.scanLoading&&!S.scanResults){
+h+=`<div style="text-align:center;margin-bottom:16px"><span style="font-size:11px;color:var(--text-d);letter-spacing:1px;text-transform:uppercase">Scan Wine Menu</span></div>`;
+h+=`<input type="file" id="scan-file" accept="image/*" capture="environment" style="display:none" onchange="scanAddPhoto(this)">`;
+if(S.scanPhotos.length){
+h+=`<div class="scan-photos">`;S.scanPhotos.forEach((p,i)=>{h+=`<div class="scan-thumb-wrap"><img class="scan-thumb" src="${p}"><button class="scan-thumb-x" onclick="scanRemove(${i})">✕</button></div>`});h+=`</div>`;
+h+=`<label class="scan-add-more" onclick="document.getElementById('scan-file').click()">+ Add page</label>`;
+h+=`<input class="is" id="scan-pair" placeholder="What are you eating? (optional)">`;
+h+=`<button class="go" onclick="scanMenu()">Analyze ${S.scanPhotos.length} ${S.scanPhotos.length===1?'Photo':'Photos'}</button>`;
+}else{
+h+=`<button class="scan-cta" onclick="document.getElementById('scan-file').click()"><div class="si">📷</div><h3>Take Photo of Wine Menu</h3><p>Multiple pages supported</p></button>`;
+}
+h+=`<div style="text-align:center;margin-top:12px"><button class="tbar-r" onclick="scanReset()">← Back</button></div>`;
+}
+if(S.scanMode==='bottle'&&!S.scanLoading&&!S.scanResults){
+h+=`<div style="text-align:center;margin-bottom:16px"><span style="font-size:11px;color:var(--text-d);letter-spacing:1px;text-transform:uppercase">Scan Bottle Label</span></div>`;
+h+=`<input type="file" id="scan-file" accept="image/*" capture="environment" style="display:none" onchange="scanAddPhoto(this)">`;
+if(S.scanPhotos.length){
+h+=`<div class="scan-photos"><div class="scan-thumb-wrap"><img class="scan-thumb" src="${S.scanPhotos[0]}" style="width:120px;height:160px"><button class="scan-thumb-x" onclick="scanRemove(0)">✕</button></div></div>`;
+h+=`<button class="go" onclick="scanBottle()">Identify Wine</button>`;
+}else{
+h+=`<button class="scan-cta" onclick="document.getElementById('scan-file').click()"><div class="si">🍾</div><h3>Photograph the Label</h3><p>Get wine details instantly</p></button>`;
+}
+h+=`<div style="text-align:center;margin-top:12px"><button class="tbar-r" onclick="scanReset()">← Back</button></div>`;
+}
+if(S.scanLoading){h+=`<div class="ld"><div class="ld-t">${S.scanPhase}</div></div>`}
+if(S.scanError){h+=`<div class="err">${S.scanError}</div><div style="text-align:center;margin-top:12px"><button class="tbar-r" onclick="scanReset()">Try again</button></div>`}
+if(S.scanResults?.wines){
+const w=S.scanResults.wines;const pair=S.scanResults.pairing;
+h+=`<div style="text-align:center;margin-bottom:12px"><span style="font-size:13px;font-weight:600">${w.length} wines found</span>`;
+if(pair)h+=`<div style="font-size:11px;color:var(--text-d);margin-top:4px">Pairing with: <span style="color:var(--gold)">${pair}</span></div>`;
+h+=`</div>`;
+w.forEach((wine,i)=>{h+=`<div class="scan-wine" style="animation-delay:${i*.04}s"><div class="sw-top"><div><div class="sw-name">${wine.name}</div><div class="sw-meta">${wine.region||''}${wine.grape?' · '+wine.grape:''}</div></div><div class="sw-score ${wine.score>=9?'s9':wine.score>=7?'s7':wine.score>=5?'s5':'sl'}">${wine.score}</div></div>`;
+if(wine.note)h+=`<p class="sw-note">${wine.note}</p>`;
+if(wine.pairing)h+=`<p class="sw-pair">🍽 ${wine.pairing}</p>`;
+h+=`</div>`});
+h+=`<div style="text-align:center;margin-top:16px"><button class="go" style="background:transparent;color:var(--gold);border:1px solid var(--gold-border)" onclick="scanReset()">📷 Scan Another Menu</button></div>`;
+}
+if(S.scanResults?.bottle){
+const b=S.scanResults.bottle;
+h+=`<div class="scan-bottle-card"><h3>${b.name}</h3>`;
+if(b.winery)h+=`<div class="sb-winery">${b.winery}</div>`;
+h+=`<div class="sb-detail">`;
+if(b.region)h+=`📍 ${b.region}${b.country?', '+b.country:''}`;
+if(b.grape)h+=`<br>🍇 ${b.grape}`;
+if(b.vintage)h+=`<br>📅 ${b.vintage}`;
+h+=`</div>`;
+if(b.notes)h+=`<p class="sb-notes">"${b.notes}"</p>`;
+h+=`</div>`;
+h+=`<div style="text-align:center;margin-top:16px"><button class="go" style="background:transparent;color:var(--gold);border:1px solid var(--gold-border)" onclick="scanReset()">🍾 Scan Another Bottle</button></div>`;
+}
+h+=`</div>`}
 
 if(S.tab==='cellar'){h+=`<div class="cel"><h2>Cellar</h2><p class="ch-p">231 wines · 12 countries</p><div class="cel-f">`;['All','Regions','Grapes','Insights'].forEach((f,i)=>{h+=`<button class="cft${i===0?' on':''}">${f}</button>`});h+=`</div>`;[{n:'Alonso del Yerro María Ribera del Duero',m:'Ribera del Duero, Spain · Tempranillo',s:'5.0',t:1},{n:'Bodegas Alvia Ribeira Sacra Mencia',m:'Ribeira Sacra, Spain · Mencia',s:'5.0',t:1},{n:'Bodegas Frontaura Crianza',m:'Toro, Spain · Tempranillo',s:'5.0',t:1},{n:'Caymus Cabernet Sauvignon',m:'Napa Valley, USA · Cabernet Sauvignon',s:'5.0',t:1},{n:'Domaine Tempier Bandol Rosé',m:'Bandol, France · Mourvèdre',s:'4.5'}].forEach((w,i)=>{h+=`<div class="wr" style="animation-delay:${i*.05}s"><div class="wr-i"><div class="wr-n">${w.n}</div><div class="wr-m">${w.m}</div></div><div style="text-align:right"><div class="ws ${w.t?'w5':'w4'}">${w.s}</div>${w.t?'<div class="wt">★ TOP</div>':''}</div></div>`});h+=`</div>`}
 
