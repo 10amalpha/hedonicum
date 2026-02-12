@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hedonicum — Your Palate, Any City</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍷</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a0a; color:#e8e4df; font-family:'DM Mono',monospace; font-size:13px; min-height:100vh; }
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+@keyframes slideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+input::placeholder { color:#333; }
+input:focus { border-color:#c4956a33 !important; outline:none; }
+.card { transition:all .3s; }
+.card.rejected { opacity:.15; max-height:0; padding:0!important; margin:0!important; overflow:hidden; border:none; }
+.maps-link:hover { opacity:1 !important; }
+.name-link:hover { color:#c4956a !important; }
+.vibe-btn:hover { border-color:#c4956a66 !important; color:#c4956a !important; }
+.city-btn:hover { border-color:#c4956a44 !important; color:#c4956a !important; }
+.action-btn:hover { opacity:1; }
+</style>
+</head>
+<body>
+<div id="app" style="max-width:720px;margin:0 auto;padding:48px 20px"></div>
+<script>
+const API = "https://wine-profile.vercel.app/api/analyze";
+const A = "#c4956a";
+
+const TASTE = `DINER PATTERN (what unites their 790 favorite venues across 31 countries):
+1. SOUL over concept — chef passion > design. Rintaro, Isolina, Taberna Antonio Sanchez
+2. INGREDIENT-DRIVEN — product is star. Bar Crudo, PPQ Dungeness, Parador La Huella
+3. NEIGHBORHOOD-ROOTED — locals eat here. Burma Superstar, Halu, La Carmencita
+4. WINE AS COMPANION — always part of the meal. Corks wine bar (38x), wineries (72 visits)
+5. UNPRETENTIOUS QUALITY — no dress code, serious food. El Che, Underdogs Tres
+6. CULTURAL AUTHENTICITY — teaches you about its cuisine. Rintaro, Isolina
+7. FIRE AND SEA — grilled, raw seafood, wood-fired
+8. REGULARS' PLACE — owner knows you after 3 visits
+AVOIDS: tourist traps, chains, hotel restaurants, molecular gimmicks, Instagram-famous
+
+NIGHTLIFE: neighborhood pubs (206x), craft cocktails (74x), dive bars (34x), natural wine bars (72x), breweries (15x)
+
+LOYALTY REFS: Burma Superstar (Burmese SF 39x), Corks (wine bar Medellin 38x), Rintaro (izakaya SF), Bar Crudo (raw bar SF), Parador La Huella (beach Uruguay), La Carmencita (vermouth Madrid), Halu (izakaya SF), Isolina (Peruvian Lima), Taberna Antonio Sanchez (tapas Madrid), El Che (grill Medellin)`;
+
+let state = { city:"", location:"", vibe:"all", loading:false, phase:"", results:null, error:"", loved:{}, rejected:{}, toast:"" };
+
+// LocalStorage for persistence
+try { state.loved = JSON.parse(localStorage.getItem("hedonicum-loved")||"{}"); } catch {}
+try { state.rejected = JSON.parse(localStorage.getItem("hedonicum-rejected")||"{}"); } catch {}
+
+function saveLoved() { localStorage.setItem("hedonicum-loved", JSON.stringify(state.loved)); }
+function saveRejected() { localStorage.setItem("hedonicum-rejected", JSON.stringify(state.rejected)); }
+
+function showToast(msg) {
+  state.toast = msg; render();
+  setTimeout(() => { state.toast = ""; render(); }, 2000);
+}
+
+function toggleLove(name) {
+  if (state.loved[name]) { delete state.loved[name]; showToast("Removed from loved"); }
+  else { state.loved[name] = true; showToast("♥ Added to taste profile"); }
+  if (state.loved[name] && state.rejected[name]) { delete state.rejected[name]; saveRejected(); }
+  saveLoved(); render();
+}
+
+function toggleReject(name) {
+  if (state.rejected[name]) { delete state.rejected[name]; showToast("Restored"); }
+  else { state.rejected[name] = true; showToast("✕ Removed"); }
+  if (state.rejected[name] && state.loved[name]) { delete state.loved[name]; saveLoved(); }
+  saveRejected(); render();
+}
+
+function clearAll() {
+  state.loved = {}; state.rejected = {};
+  localStorage.removeItem("hedonicum-loved"); localStorage.removeItem("hedonicum-rejected");
+  showToast("Taste training reset"); render();
+}
+
+function buildFeedback() {
+  const lk = Object.keys(state.loved), rk = Object.keys(state.rejected);
+  let ctx = "";
+  if (lk.length) ctx += `\n\nUSER-CONFIRMED LOVES (find MORE like these):\n${lk.map(n=>"  ♥ "+n).join("\n")}`;
+  if (rk.length) ctx += `\n\nUSER-REJECTED (AVOID similar):\n${rk.map(n=>"  ✕ "+n).join("\n")}`;
+  return ctx;
+}
+
+async function callProxy(system, user, model, useSearch) {
+  const body = { system, messages:[{role:"user",content:user}], max_tokens:3000 };
+  if (model) body.model = model;
+  if (useSearch) body.tools = [{type:"web_search_20250305",name:"web_search"}];
+  const r = await fetch(API, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  return await r.json();
+}
+
+function extractText(d) { return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n"); }
+function parseJSON(t) { const c=t.replace(/```json|```/g,"").trim(); const s=c.indexOf("{"),e=c.lastIndexOf("}"); return s>=0?JSON.parse(c.substring(s,e+1)):null; }
+
+const vibeMap = {all:"restaurants, bars, and wine spots",restaurant:"restaurants and cafes only",bar:"bars, pubs, cocktail bars, dive bars",wine:"wine bars, natural wine spots, enotecas, vinotecas"};
+
+async function go() {
+  if (!state.city.trim() || state.loading) return;
+  state.loading=true; state.error=""; state.results=null; render();
+
+  const locCtx = state.location.trim() ? `near ${state.location.trim()} (within 30 min walking distance)` : "";
+  const feedback = buildFeedback();
+
+  try {
+    state.phase = "Searching for real places..."; render();
+    const sr = await callProxy(
+      "You are a restaurant researcher. Search the web and return only REAL, currently operating places. Never invent names.",
+      `Search for the best ${vibeMap[state.vibe]} in ${state.city}${locCtx?" "+locCtx:""}. Quality-focused, local favorites, hidden gems. Search 3-4 different queries. List 12-18 real places: name, neighborhood, cuisine, price range.`,
+      "claude-sonnet-4-20250514", true
+    );
+    const found = extractText(sr);
+    if (!found || found.length < 20) { state.error="Couldn't find places. Try a larger area."; state.loading=false; render(); return; }
+
+    state.phase = "Matching to your palate..."; render();
+    const walkCtx = state.location.trim() ? `Diner is near: ${state.location.trim()}. Include walking time.` : "Include neighborhood.";
+    const scoreResult = await callProxy(
+      `You score places against a diner's taste pattern.\n\n${TASTE}${feedback}\n\nRespond ONLY with valid JSON:\n{"city_vibe":"2-3 sentences","restaurants":[{"name":"exact name","neighborhood":"area","cuisine":"type","price":"$$","walk":"time or area","spirit":"which loyalty venue this echoes, 1 sentence","score":8,"q":"name city for maps"}]}\nSort by score desc.`,
+      `City: ${state.city}\n${walkCtx}\nCategory: ${vibeMap[state.vibe]}\n\nPlaces found:\n${found}\n\nScore each. Only include places from the search results.`,
+      "claude-sonnet-4-20250514", false
+    );
+    const parsed = parseJSON(extractText(scoreResult));
+    if (parsed?.restaurants?.length) state.results = parsed;
+    else state.error = "Couldn't score results. Try again.";
+  } catch(e) { state.error = "Error: " + e.message; }
+  state.loading=false; state.phase=""; render();
+}
+
+function sc(s) { return s>=9?"#c4956a":s>=7?"#a08060":s>=5?"#6a6a5a":"#444"; }
+function mapsUrl(r) { return `https://www.google.com/maps/search/${encodeURIComponent(r.q||r.name+" "+state.city)}`; }
+
+function render() {
+  const lc = Object.keys(state.loved).length, rc = Object.keys(state.rejected).length;
+  const vibes = [{id:"all",label:"All"},{id:"restaurant",label:"Eat"},{id:"bar",label:"Drink"},{id:"wine",label:"Wine"}];
+
+  let html = '';
+
+  // Toast
+  if (state.toast) html += `<div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid ${A}44;color:#999;padding:8px 20px;border-radius:8px;font-size:11px;z-index:99;animation:fadeIn .2s">${state.toast}</div>`;
+
+  // Header
+  html += `<div style="text-align:center;margin-bottom:44px">
+    <h1 style="font-family:'Fraunces',Georgia,serif;font-size:42px;color:${A};margin:0;font-weight:300;letter-spacing:-1px">Hedonicum</h1>
+    <p style="color:#2a2a2a;font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-top:8px">Your palate · Any city</p>
+  </div>`;
+
+  // City input
+  html += `<div style="margin-bottom:12px"><input id="cityInput" value="${state.city}" placeholder="Where are you going?" style="width:100%;background:#0f0f0f;border:1px solid #1a1a1a;border-radius:8px;color:#e8e4df;font-family:inherit;font-size:16px;padding:16px 20px;outline:none"></div>`;
+
+  // Location input
+  html += `<div style="margin-bottom:16px"><input id="locInput" value="${state.location}" placeholder="Staying near? (hotel, address, neighborhood)" style="width:100%;background:#0f0f0f;border:1px solid #141414;border-radius:8px;color:#e8e4df;font-family:inherit;font-size:12px;padding:12px 20px;outline:none"></div>`;
+
+  // Vibes + button
+  html += `<div style="display:flex;gap:8px;margin-bottom:40px;align-items:center"><div style="display:flex;gap:4px;flex:1">`;
+  vibes.forEach(v => {
+    const sel = state.vibe===v.id;
+    html += `<button class="vibe-btn" onclick="state.vibe='${v.id}';render()" style="background:${sel?"#1a1a1a":"transparent"};border:1px solid ${sel?A+"66":"#1a1a1a"};border-radius:6px;color:${sel?A:"#444"};font-family:inherit;font-size:11px;padding:8px 16px;cursor:pointer">${v.label}</button>`;
+  });
+  html += `</div><button onclick="go()" ${state.loading?'disabled':''} style="background:${state.loading?"#222":A};color:#000;border:none;border-radius:8px;padding:12px 32px;font-family:'Fraunces',serif;font-size:14px;cursor:${state.loading?"wait":"pointer"};font-weight:400">${state.loading?"...":"Discover"}</button></div>`;
+
+  // Training stats
+  if ((lc>0||rc>0) && !state.loading) {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:8px 0"><div style="font-size:10px;color:#333">`;
+    if (lc>0) html += `<span style="color:#6a8a5a">♥ ${lc} loved</span>`;
+    if (lc>0&&rc>0) html += `<span style="margin:0 8px">·</span>`;
+    if (rc>0) html += `<span style="color:#8a4a4a">✕ ${rc} rejected</span>`;
+    html += `<span style="color:#222;margin-left:8px">· shaping your taste</span></div>`;
+    html += `<button onclick="clearAll()" style="background:transparent;border:none;color:#222;font-size:9px;cursor:pointer;font-family:inherit">Reset</button></div>`;
+  }
+
+  // Loading
+  if (state.loading) {
+    html += `<div style="text-align:center;padding:48px 0;animation:pulse 2s ease-in-out infinite"><div style="font-family:'Fraunces',serif;font-size:16px;color:#444">${state.phase}</div>`;
+    if (state.location) html += `<div style="color:#222;font-size:11px;margin-top:8px">Within 30 min walk of ${state.location}</div>`;
+    html += `</div>`;
+  }
+
+  // Error
+  if (state.error) html += `<div style="color:#8a4a4a;text-align:center;padding:20px">${state.error}</div>`;
+
+  // Results
+  if (state.results) {
+    html += `<div style="background:#0f0f0f;border-radius:12px;padding:20px 24px;margin-bottom:32px;border-left:2px solid ${A}33"><p style="color:#666;font-size:13px;line-height:1.8;margin:0">${state.results.city_vibe}</p></div>`;
+
+    state.results.restaurants.forEach((r,i) => {
+      const isL=state.loved[r.name], isR=state.rejected[r.name];
+      const esc = r.name.replace(/'/g,"\\'");
+      html += `<div class="card${isR?' rejected':''}" style="background:#0f0f0f;border-radius:10px;padding:20px 24px;margin-bottom:8px;border-left:3px solid ${isL?"#6a8a5a":sc(r.score)};animation:slideIn .4s ease-out ${i*.05}s both">`;
+      html += `<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1">`;
+      html += `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><a href="${mapsUrl(r)}" target="_blank" class="name-link" style="font-family:'Fraunces',serif;font-size:17px;color:#e8e4df;text-decoration:none">${r.name}</a><span style="color:#444;font-size:10px">${r.cuisine}</span>`;
+      if (r.price) html += `<span style="color:#5a7a5a;font-size:11px">${r.price}</span>`;
+      html += `</div><div style="color:#333;font-size:11px;margin-top:3px">${r.neighborhood}${r.walk?`<span style="color:#444;margin-left:6px">· ${r.walk}</span>`:""}</div></div>`;
+
+      // Action buttons
+      html += `<div style="display:flex;align-items:center;gap:8px">`;
+      html += `<button class="action-btn" onclick="toggleReject('${esc}')" style="background:${isR?"#2a1a1a":"transparent"};border:1px solid ${isR?"#8a4a4a33":"#1a1a1a"};border-radius:6px;color:${isR?"#8a4a4a":"#333"};width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit">✕</button>`;
+      html += `<div style="text-align:center;min-width:36px"><div style="font-family:'Fraunces',serif;font-size:26px;color:${sc(r.score)};line-height:1">${r.score}</div></div>`;
+      html += `<button class="action-btn" onclick="toggleLove('${esc}')" style="background:${isL?"#1a2a1a":"transparent"};border:1px solid ${isL?"#6a8a5a33":"#1a1a1a"};border-radius:6px;color:${isL?"#6a8a5a":"#333"};width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit">♥</button>`;
+      html += `</div></div>`;
+
+      html += `<p style="color:#777;font-size:12px;line-height:1.6;margin:10px 0 0">${r.spirit}</p>`;
+      html += `<a href="${mapsUrl(r)}" target="_blank" class="maps-link" style="color:${A};font-size:11px;text-decoration:none;display:inline-block;margin-top:10px;opacity:.7">→ Open in Google Maps</a>`;
+      html += `</div>`;
+    });
+
+    html += `<div style="text-align:center;margin:48px 0 20px;color:#1a1a1a;font-size:10px">Web-verified · Pattern-matched · ♥ and ✕ train your taste</div>`;
+  }
+
+  // Empty state
+  if (!state.loading && !state.results && !state.error) {
+    html += `<div style="text-align:center;margin-top:56px"><p style="font-family:'Fraunces',serif;font-size:16px;color:#252525;font-weight:300;line-height:1.6">Not where you've been.<br>Where you should go.</p>`;
+    html += `<div style="display:flex;gap:8px;justify-content:center;margin-top:28px;flex-wrap:wrap">`;
+    ["Tokyo","Lisbon","Buenos Aires","Copenhagen","El Retiro","Barcelona","CDMX","Berlin"].forEach(c => {
+      html += `<button class="city-btn" onclick="state.city='${c}';render();document.getElementById('cityInput').value='${c}'" style="background:transparent;border:1px solid #1a1a1a;border-radius:20px;color:#333;font-family:inherit;font-size:11px;padding:6px 16px;cursor:pointer">${c}</button>`;
+    });
+    html += `</div></div>`;
+  }
+
+  document.getElementById('app').innerHTML = html;
+
+  // Rebind inputs
+  const ci = document.getElementById('cityInput');
+  const li = document.getElementById('locInput');
+  if (ci) {
+    ci.addEventListener('input', e => { state.city = e.target.value; });
+    ci.addEventListener('keydown', e => { if (e.key==='Enter') go(); });
+    if (!state.loading && !state.results) ci.focus();
+  }
+  if (li) li.addEventListener('input', e => { state.location = e.target.value; });
+}
+
+render();
+</script>
+</body>
+</html>
