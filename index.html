@@ -283,7 +283,11 @@ if(typeof mw[0]==='string')mw=mw.map(n=>({name:n,price:null}));
 if(!mw?.length){S.scanError='No wines found on menu';S.scanLoading=false;render();return}
 S.scanPhase='Your sommelier is thinking...';render();
 const names=mw.map(w=>w.name);
-const somPrompt='You score wine menu items for a Tempranillo loyalist who rates wines 1-5, prefers Spanish reds (Rioja, Ribera del Duero), Southern Italian, Uruguayan Tannat, and Italian whites. Favorite grapes: Tempranillo (68), Pinot Noir (24), Sangiovese (16), Tannat (14). 231 wines rated, avg 4.2.'+(pair?' Eating: '+pair:'')+'\n\nMenu wines:\n'+names.map((n,i)=>(i+1)+'. '+n).join('\n')+'\n\nScore each 1-10 on how much this diner would enjoy it. Return ONLY JSON: {"wines":[{"name":"exact menu name","score":8,"region":"if known","grape":"if known","note":"1 sentence why this score"'+(pair?',"pairing":"food pairing note"':'')+'}]}';
+const cw=cellarWines||CW.map(w=>({name:w.n,region:w.r,country:w.c,grape:w.g,vintage:w.v,rating:w.t}));
+const gm={};cw.forEach(w=>{if(w.grape&&w.grape!=='Unknown')gm[w.grape]=(gm[w.grape]||0)+1});
+const topGr=Object.entries(gm).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([g,n])=>g+' ('+n+')').join(', ');
+const cwAvg=cw.length?(cw.reduce((s,w)=>s+w.rating,0)/cw.length).toFixed(1):'4.2';
+const somPrompt='You score wine menu items for a wine enthusiast. '+cw.length+' wines rated, avg '+cwAvg+'. Favorite grapes: '+topGr+'. Prefers Spanish reds (Rioja, Ribera del Duero), Southern Italian, Uruguayan Tannat, and Italian whites.'+(pair?' Eating: '+pair:'')+'\n\nMenu wines:\n'+names.map((n,i)=>(i+1)+'. '+n).join('\n')+'\n\nScore each 1-10 on how much this diner would enjoy it. Return ONLY JSON: {"wines":[{"name":"exact menu name","score":8,"region":"if known","grape":"if known","note":"1 sentence why this score"'+(pair?',"pairing":"food pairing note"':'')+'}]}';
 const d2=await callScan([{role:'user',content:somPrompt}],3000);
 if(d2.error){S.scanError='Scoring error';S.scanLoading=false;render();return}
 const t2=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
