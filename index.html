@@ -367,8 +367,29 @@ h+=`<div class="hero"><h1>Hedonicum</h1><div class="sub">Taste Intelligence</div
 const wn=cellarWines?cellarWines.length:231;
 const wcn=cellarWines?new Set(cellarWines.map(w=>w.country).filter(Boolean)).size:12;
 const wavg=cellarWines&&cellarWines.length?(cellarWines.reduce((s,w)=>s+w.rating,0)/cellarWines.length).toFixed(1):'4.2';
-h+=`<div class="identity"><div class="id-top"><div class="id-h">@Holdmybirra</div><div class="id-badge">Sommelier</div></div><div class="id-bio"><b>${wn} wines</b> across <b>${wcn} countries</b>. <b>${gTV()} venues</b> across <b>${gTC()} countries</b>. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div></div>`;
-h+=`<div class="stats">`;[{n:String(wn),l:'Wines',g:1},{n:String(gTV()),l:'Venues'},{n:String(gTC()),l:'Countries',g:1},{n:wavg,l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
+const wGrapes=cellarWines?new Set(cellarWines.map(w=>w.grape).filter(g=>g&&g!=='Unknown')).size:40;
+const vn=gTV(),vc=gTC();
+// H-Score: 0-100
+const hs=Math.min(100,Math.round(
+  Math.min(wn/3,25)+
+  Math.min(vn/80,25)+
+  Math.min(vc/2,15)+
+  Math.min(wGrapes/2,10)+
+  Math.min(Object.keys(S.loved).length/3,10)+
+  (parseFloat(wavg)>=4?5:parseFloat(wavg)>=3.5?3:1)+
+  Math.min((cellarWines||[]).filter(w=>w.rating>=5).length/2,10)
+));
+const hStars=hs>=80?5:hs>=60?4:hs>=40?3:hs>=20?2:1;
+const hTier=hStars===5?'Epicurean':hStars===4?'Tastemaker':hStars===3?'Refined':hStars===2?'Adventurous':'Curious';
+const hStarStr='★'.repeat(hStars)+'☆'.repeat(5-hStars);
+h+=`<div class="identity">`;
+h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">`;
+h+=`<div><div class="id-h"><a href="https://x.com/holdmybirra" target="_blank" style="color:inherit;text-decoration:none">@Holdmybirra</a></div></div>`;
+h+=`<div style="text-align:right"><div style="font-size:20px;letter-spacing:2px;color:var(--gold)">${hStarStr}</div><div style="display:flex;align-items:baseline;justify-content:flex-end;gap:6px"><span style="font-size:22px;font-weight:800;color:var(--gold);line-height:1">${hs}</span><span style="font-size:10px;letter-spacing:1.5px;color:var(--gold);font-weight:600;text-transform:uppercase">${hTier}</span></div></div>`;
+h+=`</div>`;
+h+=`<div class="id-bio">H-Score earned through ${wn} wines across ${wcn} countries. ${vn} venues across ${vc} countries. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div>`;
+h+=`</div>`;
+h+=`<div class="stats">`;[{n:String(wn),l:'Wines',g:1},{n:String(vn),l:'Venues'},{n:String(vc),l:'Countries',g:1},{n:wavg,l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Taste DNA</div>`;
 const dna=tasteDNA();
 const basePillars=['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'];
@@ -424,7 +445,7 @@ SV.slice(0,6).forEach((v,i)=>{const mq=encodeURIComponent(v.n+' '+v.co);h+=`<a h
 
 if(S.tab==='discover'){
 h+=`<div class="disc"><div class="disc-h"><h2>Discover</h2><p>Your palate, any city</p></div>`;
-h+=`<div class="pow"><div class="pow-av">🍷</div><div class="pow-t">Powered by <b>@Holdmybirra's palate</b> — ${gTV()} venues, ${gTC()} countries</div></div>`;
+h+=`<div class="pow"><div class="pow-av">🍷</div><div class="pow-t">Powered by <a href="https://x.com/holdmybirra" target="_blank" style="color:var(--gold);text-decoration:none"><b>@Holdmybirra's palate</b></a> — ${gTV()} venues, ${gTC()} countries</div></div>`;
 h+=`<input class="im" id="ci" value="${S.city}" placeholder="Where are you going?"><input class="is" id="li" value="${S.loc}" placeholder="Staying near? (hotel, neighborhood)">`;
 h+=`<div class="fr">`;[{id:'all',l:'All'},{id:'restaurant',l:'Eat'},{id:'bar',l:'Drink'},{id:'wine',l:'Wine'}].forEach(v=>{h+=`<button class="fb${S.vibe===v.id?' on':''}" onclick="S.vibe='${v.id}';render()">${v.l}</button>`});
 h+=`</div><button class="go" onclick="go()" ${S.loading?'disabled':''}>${S.loading?'···':'Discover'}</button>`;
