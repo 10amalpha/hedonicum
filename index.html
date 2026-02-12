@@ -106,6 +106,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .ws{font-size:24px;font-weight:800}.ws.w5{color:var(--gold)}.ws.w4{color:#b8956a}
 .wt{font-size:8px;color:var(--gold);letter-spacing:.5px;font-weight:700}
 .pb20{padding-bottom:20px}
+.pp-wrap{position:relative;overflow:hidden}
+.pp-page{transition:opacity .6s ease,transform .6s ease}
+.pp-page.out{opacity:0;transform:scale(.96)}
+.cr{cursor:pointer;transition:all .2s}.cr:active{transform:scale(.97)}
+.cr-exp{overflow:hidden;transition:max-height .35s ease,opacity .3s;max-height:0;opacity:0}
+.cr-exp.open{max-height:600px;opacity:1}
+.cr-v{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:12px;color:var(--text-m);border-bottom:1px solid var(--border-d)}.cr-v:last-child{border:none}
+.cr-v .cv-n{flex:1;font-weight:600;color:var(--text)}.cr-v .cv-c{color:var(--text-d);font-size:11px}.cr-v .cv-l{color:var(--text-l);font-size:10px}
+.cr-arr{font-size:10px;color:var(--text-d);transition:transform .2s}.cr-arr.op{transform:rotate(90deg)}
+.feed-card{background:var(--bg-card);border:1px solid var(--border-d);border-radius:14px;padding:14px 16px;margin-bottom:8px;animation:fadeUp .4s ease-out both;display:flex;align-items:center;gap:12px}
+.feed-card .fc-flag{font-size:20px;flex-shrink:0}
+.feed-card .fc-info{flex:1;min-width:0}
+.feed-card .fc-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-card .fc-meta{font-size:11px;color:var(--text-d);margin-top:2px}
+.feed-card .fc-loc{font-size:10px;color:var(--text-l);margin-top:1px}
+.pp-dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.pp-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:all .3s}.pp-dot.on{background:var(--gold);width:16px;border-radius:3px}
 </style>
 </head>
 <body>
@@ -132,6 +149,35 @@ try{S.rejected=JSON.parse(localStorage.getItem('h-rej')||'{}')}catch{}
 const BASE={venues:790,countries:31,wines:231,avg:'4.2'};
 const BASE_PP=[{f:'🇺🇸',n:'USA',c:412},{f:'🇨🇴',n:'Colombia',c:198},{f:'🇪🇸',n:'Spain',c:77},{f:'🇮🇹',n:'Italy',c:65},{f:'🇺🇾',n:'Uruguay',c:17},{f:'🇫🇷',n:'France',c:12},{f:'🇯🇵',n:'Japan',c:11},{f:'🇵🇪',n:'Peru',c:9},{f:'🇬🇧',n:'UK',c:8},{f:'🇲🇽',n:'Mexico',c:7}];
 const CC={'Tokyo':'🇯🇵 Japan','Kyoto':'🇯🇵 Japan','Osaka':'🇯🇵 Japan','Lisbon':'🇵🇹 Portugal','Porto':'🇵🇹 Portugal','Buenos Aires':'🇦🇷 Argentina','Copenhagen':'🇩🇰 Denmark','Barcelona':'🇪🇸 Spain','Madrid':'🇪🇸 Spain','El Retiro':'🇪🇸 Spain','Sevilla':'🇪🇸 Spain','CDMX':'🇲🇽 Mexico','Berlin':'🇩🇪 Germany','Munich':'🇩🇪 Germany','Paris':'🇫🇷 France','Lyon':'🇫🇷 France','Rome':'🇮🇹 Italy','Milan':'🇮🇹 Italy','Florence':'🇮🇹 Italy','Naples':'🇮🇹 Italy','London':'🇬🇧 UK','Lima':'🇵🇪 Peru','Montevideo':'🇺🇾 Uruguay','Medellín':'🇨🇴 Colombia','Bogotá':'🇨🇴 Colombia','Cartagena':'🇨🇴 Colombia','San Francisco':'🇺🇸 USA','New York':'🇺🇸 USA','Los Angeles':'🇺🇸 USA','Bangkok':'🇹🇭 Thailand','Seoul':'🇰🇷 South Korea','Singapore':'🇸🇬 Singapore','Sydney':'🇦🇺 Australia','Amsterdam':'🇳🇱 Netherlands','Prague':'🇨🇿 Czechia','Vienna':'🇦🇹 Austria','Istanbul':'🇹🇷 Turkey','Dublin':'🇮🇪 Ireland','Stockholm':'🇸🇪 Sweden','Athens':'🇬🇷 Greece','Split':'🇭🇷 Croatia'};
+const VBC={
+'USA':['Burma Superstar|Burmese|SF','Bar Crudo|Raw Bar|SF','Rintaro|Izakaya|SF','Halu|Izakaya|SF','PPQ Dungeness Island|Viet-Cajun|SF','Bask|Basque|SF','China Live|Asian|SF','Umami Burger|Burger|SF','Ariake|Sushi|SF','Rustic Inn Crabhouse|Seafood|FL','Estiatorio Milos|Greek|NYC','Keens Steakhouse|Steakhouse|NYC','JG Melon|Burger|NYC','Osteria 57|Italian|NYC'],
+'Colombia':['Corks|Wine Bar|Medellín','Underdogs Tres|Tacos|Medellín','El Ché|Argentinian|Medellín','Sakesan Sushi & Bistro|Japanese|Medellín','37 Park|Lounge|Medellín','Bipolar Brewing Co.|Brewery|Medellín'],
+'Spain':['La Carmencita|Vermouth|Madrid','Taberna Antonio Sánchez|Tapas|Madrid','Castelados|Spanish|Madrid','ORIO Fuencarral|Tapas|Madrid','Bar Pelayo|Tapas|Madrid','Quispe|Peruvian|Madrid','O\'Grelo|Seafood|Madrid','Casa Benigna|Spanish|Madrid'],
+'Italy':['Cucina del Teatro|Italian|Rome','Alfredo alla Scrofa|Italian|Rome','Taverna Trilussa|Italian|Rome','Osteria dei Cappellari|Italian|Rome','Da Ganino Hosteria|Italian|Florence','Pescheria Bianchi|Seafood|Puglia','Antica Porchetteria|Deli|Florence'],
+'Uruguay':['Parador La Huella|Mediterranean|José Ignacio','La Juana|Beach|José Ignacio','Solera Vinos Y Tapas|Wine|Montevideo','La Susana|Beach|José Ignacio','Narbona|Wine|Carmelo'],
+'France':['Chez Maman|French|SF','Nina à la Plage|Gastropub|Nice','domaine de cray|Winery|Loire'],
+'Japan':['Butagumi|Tonkatsu|Tokyo','sake × oyster BAR 石花|Seafood|Tokyo','Atrevio|Spanish|Tokyo','いいと EAT 麻布十番|Sushi|Tokyo'],
+'Peru':['Isolina Taberna Peruana|Peruvian|Lima','Canta Rana|Ceviche|Lima','El Muelle|Seafood|Lima','La Bodega Verde|Café|Lima'],
+'UK':['Masala Zone|Indian|London','Seabird|Seafood|London','The Spanish Butcher|Steakhouse|Glasgow'],
+'Mexico':['Rosetta|Italian|CDMX','Tori Tori Temístocles|Japanese|CDMX','Guzina Oaxaca|Mexican|CDMX','La Mezcalería|Mexican|CDMX'],
+'Brazil':['Nino Cucina|Italian|São Paulo','Due Cuochi Cucina|Italian|Curitiba','Santo Grão|Coffee|São Paulo'],
+'Chile':['La Tasca de Altamar|Seafood|Valparaíso','La Mar|Peruvian|Santiago'],
+'Turkey':['Zıpkın|Seafood|Istanbul','Tavanarasɪ|Turkish|Istanbul','Müşterek Meyhane|Turkish|Istanbul'],
+'Thailand':['The House by Ginger|Thai|Chiang Mai','Kiti Panit|Thai|Chiang Mai'],
+'Portugal':['Cantina 32|Tapas|Porto','Bacalhau|Portuguese|Porto','The Old Pharmacy|Wine|Porto'],
+'S. Korea':['WUMOK|BBQ|Seoul','Osteria Eobu|Italian|Seoul'],
+'Singapore':['Pasta Bar|Italian|Singapore'],
+'Austria':['Bindaas|Indian|Vienna','Finsterwirt|Austrian|Innsbruck'],
+'Germany':['Yum|Thai|Munich','Hofbräuhaus|German|Munich']
+};
+const AV=[];Object.entries(VBC).forEach(([co,vs])=>vs.forEach(v=>{const p=v.split('|');AV.push({n:p[0],c:p[1],l:p[2],co})}));
+function shuf(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]]}return b}
+let SV=shuf(AV),ppPage=0,ppOpen=null,feedTick=0;
+let ppTimer=null,feedTimer=null,ppCount=0,feedCount=0;
+const PP_MAX=5,FEED_MAX=6;
+function startPP(){if(ppTimer)return;ppCount=0;ppTimer=setInterval(()=>{if(ppOpen||ppCount>=PP_MAX){clearInterval(ppTimer);ppTimer=null;return}ppPage=(ppPage+1)%3;ppCount++;render()},8000)}
+function startFeed(){if(feedTimer)return;feedCount=0;feedTimer=setInterval(()=>{if(ppOpen||feedCount>=FEED_MAX){clearInterval(feedTimer);feedTimer=null;return}feedTick++;SV=shuf(AV);feedCount++;render()},10000)}
+startPP();startFeed();
 function gDC(){return Object.keys(S.loved).length}
 function gTV(){return BASE.venues+gDC()}
 function gPP(){const m={};BASE_PP.forEach(p=>{m[p.n]={f:p.f,c:p.c}});Object.values(S.loved).forEach(v=>{if(typeof v==='object'&&v.city){const cc=CC[v.city];if(cc){const[flag,country]=cc.split(' ');if(!m[country])m[country]={f:flag,c:0};m[country].c++}}});return Object.entries(m).map(([n,v])=>({f:v.f,n,c:v.c})).sort((a,b)=>b.c-a.c).slice(0,8)}
@@ -165,8 +211,18 @@ h+=`<div class="hero"><h1>Hedonicum</h1><div class="sub">Taste Intelligence</div
 h+=`<div class="identity"><div class="id-top"><div class="id-h">@Holdmybirra</div><div class="id-badge">Sommelier</div></div><div class="id-bio"><b>231 wines</b> across <b>12 countries</b>. <b>${gTV()} venues</b> across <b>${gTC()} countries</b>. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div></div>`;
 h+=`<div class="stats">`;[{n:'231',l:'Wines',g:1},{n:String(gTV()),l:'Venues'},{n:String(gTC()),l:'Countries',g:1},{n:'4.2',l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Taste DNA</div><div class="dna">`;['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'].forEach(d=>{h+=`<div class="dp">${d}</div>`});h+=`</div></div>`;
-h+=`<div class="sec"><div class="sec-h">Passport</div><div class="cg">`;gPP().forEach(x=>{h+=`<div class="cr"><span class="cf">${x.f}</span><span class="cn">${x.n}</span><span class="cc">${x.c}</span></div>`});h+=`</div></div>`;
-h+=`<div class="sec pb20"><div class="sec-h">Loyalty Venues</div>`;[{r:1,n:'Burma Superstar',m:'Burmese · San Francisco',v:39},{r:2,n:'Corks Wine Bar',m:'Wine Bar · Medellín',v:38},{r:3,n:'Rintaro',m:'Izakaya · San Francisco',v:24},{r:4,n:'Bar Crudo',m:'Raw Bar · San Francisco',v:21},{r:5,n:'Parador La Huella',m:'Beach · José Ignacio',v:18}].forEach((x,i)=>{h+=`<div class="vr" style="animation-delay:${i*.05}s"><div class="vr-r">${x.r}</div><div class="vr-i"><div class="vr-n">${x.n}</div><div class="vr-m">${x.m}</div></div><div style="text-align:right"><div class="vr-v">${x.v}</div><div class="vr-vl">visits</div></div></div>`});h+=`</div>`;
+h+=`<div class="sec"><div class="sec-h">Passport · ${gTC()} countries</div><div class="pp-wrap"><div class="cg">`;
+const pp=gPP();const ppSize=4;const ppStart=ppPage*ppSize;const ppSlice=pp.concat(pp).slice(ppStart,ppStart+ppSize);
+ppSlice.forEach(x=>{const isOpen=ppOpen===x.n;const vs=VBC[x.n]||[];
+h+=`<div><div class="cr" onclick="ppOpen=ppOpen==='${x.n}'?null:'${x.n}';if(ppOpen){clearInterval(ppTimer);ppTimer=null;clearInterval(feedTimer);feedTimer=null}else{startPP();startFeed()}render()"><span class="cf">${x.f}</span><span class="cn">${x.n}</span><span class="cr-arr${isOpen?' op':''}">▸</span><span class="cc">${x.c}</span></div>`;
+h+=`<div class="cr-exp${isOpen?' open':''}">`;
+if(isOpen&&vs.length){vs.slice(0,8).forEach(v=>{const p=v.split('|');h+=`<div class="cr-v"><span class="cv-n">${p[0]}</span><span class="cv-c">${p[1]}</span><span class="cv-l">${p[2]}</span></div>`})}
+h+=`</div></div>`});
+h+=`</div><div class="pp-dots">`;[0,1,2].forEach(i=>{h+=`<div class="pp-dot${ppPage===i?' on':''}"></div>`});
+h+=`</div></div></div>`;
+
+h+=`<div class="sec pb20"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center"><span>Where is @Holdmybirra eating</span><span style="font-size:9px;color:var(--text-l);letter-spacing:0;text-transform:none;font-weight:400">refreshes ↻</span></div>`;
+SV.slice(0,6).forEach((v,i)=>{const FL={'USA':'🇺🇸','Colombia':'🇨🇴','Spain':'🇪🇸','Italy':'🇮🇹','Uruguay':'🇺🇾','France':'🇫🇷','Japan':'🇯🇵','Peru':'🇵🇪','UK':'🇬🇧','Mexico':'🇲🇽','Brazil':'🇧🇷','Chile':'🇨🇱','Turkey':'🇹🇷','Thailand':'🇹🇭','Portugal':'🇵🇹','S. Korea':'🇰🇷','Singapore':'🇸🇬','Austria':'🇦🇹','Germany':'🇩🇪'};const flag=FL[v.co]||'🌍';h+=`<div class="feed-card" style="animation-delay:${i*.06}s"><div class="fc-flag">${flag}</div><div class="fc-info"><div class="fc-name">${v.n}</div><div class="fc-meta">${v.c} · ${v.co}</div><div class="fc-loc">${v.l}</div></div></div>`});h+=`</div>`;
 }
 
 if(S.tab==='discover'){
