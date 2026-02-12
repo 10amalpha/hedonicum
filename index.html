@@ -221,12 +221,12 @@ const pp=gPP();
 pp.forEach(x=>{const isOpen=ppOpen===x.n;const vs=VBC[x.n]||[];
 h+=`<div class="cr" onclick="ppOpen=ppOpen==='${x.n}'?null:'${x.n}';render()" style="margin-bottom:${isOpen?'0':'6'}px"><span class="cf">${x.f}</span><span class="cn">${x.n}</span><span class="cr-arr${isOpen?' op':''}">▸</span><span class="cc">${x.c}</span></div>`;
 h+=`<div class="cr-exp${isOpen?' open':''}">`;
-if(isOpen&&vs.length){vs.forEach(v=>{h+=`<div class="cr-v"><span class="cv-n">${v}</span></div>`})}
+if(isOpen&&vs.length){vs.forEach(v=>{const mq=encodeURIComponent(v+' '+x.n);h+=`<a href="https://www.google.com/maps/search/${mq}" target="_blank" class="cr-v" style="text-decoration:none;color:inherit"><span class="cv-n">${v}</span><span class="cv-c" style="color:var(--gold);font-size:10px">↗</span></a>`})}
 h+=`</div>`});
 h+=`</div>`;
 
 h+=`<div class="sec pb20"><div class="sec-h">Where is @Holdmybirra eating</div>`;
-SV.slice(0,6).forEach((v,i)=>{const flag=FL[v.co]||'🌍';h+=`<div class="feed-card" style="animation-delay:${i*.06}s"><div class="fc-flag">${flag}</div><div class="fc-info"><div class="fc-name">${v.n}</div><div class="fc-meta">${v.co}</div></div></div>`});h+=`</div>`;
+SV.slice(0,6).forEach((v,i)=>{const mq=encodeURIComponent(v.n+' '+v.co);h+=`<a href="https://www.google.com/maps/search/${mq}" target="_blank" class="feed-card" style="text-decoration:none;color:inherit;animation-delay:${i*.06}s"><div class="fc-info"><div class="fc-name">${v.n}</div><div class="fc-meta">${v.co}</div></div><span style="color:var(--gold);font-size:11px;flex-shrink:0">↗</span></a>`});h+=`</div>`;
 }
 
 if(S.tab==='discover'){
