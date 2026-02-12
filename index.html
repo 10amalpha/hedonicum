@@ -377,7 +377,7 @@ const hs=Math.min(100,Math.round(
   Math.min(wGrapes/2,10)+
   Math.min(Object.keys(S.loved).length/3,10)+
   (parseFloat(wavg)>=4?5:parseFloat(wavg)>=3.5?3:1)+
-  Math.min((cellarWines||[]).filter(w=>w.rating>=5).length/2,10)
+  Math.min((cellarWines?cellarWines.filter(w=>w.rating>=5):CW.filter(w=>w.t>=5)).length/2,10)
 ));
 const hStars=hs>=80?5:hs>=60?4:hs>=40?3:hs>=20?2:1;
 const hTier=hStars===5?'Epicurean':hStars===4?'Tastemaker':hStars===3?'Refined':hStars===2?'Adventurous':'Curious';
@@ -389,7 +389,6 @@ h+=`<div style="text-align:right"><div style="font-size:20px;letter-spacing:2px;
 h+=`</div>`;
 h+=`<div class="id-bio">H-Score earned through ${wn} wines across ${wcn} countries. ${vn} venues across ${vc} countries. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div>`;
 h+=`</div>`;
-h+=`<div class="stats">`;[{n:String(wn),l:'Wines',g:1},{n:String(vn),l:'Venues'},{n:String(vc),l:'Countries',g:1},{n:wavg,l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Taste DNA</div>`;
 const dna=tasteDNA();
 const basePillars=['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'];
