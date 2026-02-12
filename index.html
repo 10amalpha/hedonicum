@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .hero::before{content:'';position:absolute;top:0;left:0;right:0;height:200px;background:radial-gradient(ellipse at center top,rgba(212,169,106,.06) 0%,transparent 70%);pointer-events:none}
 .hero h1{font-size:36px;font-weight:800;color:var(--gold);letter-spacing:.5px;position:relative}
 .hero .sub{color:var(--text-l);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;margin-top:4px}
-.identity{margin:20px 20px 0;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden}
+.identity{margin:20px 20px 0;background:var(--bg-card);border:1.5px solid var(--gold-border);border-radius:16px;padding:18px;position:relative;overflow:hidden;box-shadow:0 0 24px rgba(180,140,80,.08)}
 .identity::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),rgba(212,169,106,.3),var(--gold));background-size:200% 100%;animation:shimmer 3s ease-in-out infinite}
 .id-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .id-h{font-size:20px;font-weight:800}
@@ -388,27 +388,22 @@ h+=`<div><div class="id-h"><a href="https://x.com/holdmybirra" target="_blank" s
 h+=`<div style="text-align:right"><div style="font-size:20px;letter-spacing:2px;color:var(--gold)">${hStarStr}</div><div style="display:flex;align-items:baseline;justify-content:flex-end;gap:6px"><span style="font-size:22px;font-weight:800;color:var(--gold);line-height:1">${hs}</span><span style="font-size:10px;letter-spacing:1.5px;color:var(--gold);font-weight:600;text-transform:uppercase">${hTier}</span></div></div>`;
 h+=`</div>`;
 h+=`<div class="id-bio">`;
-h+=`<div style="color:var(--text-d);font-size:11px;margin-bottom:8px">H-Score earned through</div>`;
-h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">`;
-h+=`<span style="background:var(--bg);border:1px solid var(--border-d);border-radius:6px;padding:3px 10px;font-size:12px"><b style="color:var(--gold)">${wn}</b> <span style="color:var(--text-d)">wines</span></span>`;
-h+=`<span style="background:var(--bg);border:1px solid var(--border-d);border-radius:6px;padding:3px 10px;font-size:12px"><b style="color:var(--gold)">${vn}</b> <span style="color:var(--text-d)">venues</span></span>`;
-h+=`<span style="background:var(--bg);border:1px solid var(--border-d);border-radius:6px;padding:3px 10px;font-size:12px"><b style="color:var(--gold)">${vc}</b> <span style="color:var(--text-d)">countries</span></span>`;
-h+=`</div>`;
+h+=`<div style="color:var(--text-d);font-size:12px;line-height:1.6;margin-bottom:8px">H-Score earned through <span style="color:var(--gold);font-weight:700">${wn}</span> wines · <span style="color:var(--gold);font-weight:700">${vn}</span> venues · <span style="color:var(--gold);font-weight:700">${vc}</span> countries</div>`;
 h+=`<div style="color:var(--text-m);font-size:13px;line-height:1.5;margin-bottom:8px">Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div>`;
 h+=`</div>`;
 h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Taste DNA</div>`;
 const dna=tasteDNA();
-const basePillars=['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'];
+const basePillars=['Soul over concept','Fire & sea','Neighborhood roots','Wine companion','Ingredient-driven','Regulars\' place'];
 if(dna.lovedCount>=3){
 const topC=Object.entries(dna.cuisines).sort((a,b)=>b[1]-a[1]).slice(0,4);
 const topV=Object.entries(dna.vibes).sort((a,b)=>b[1]-a[1]).slice(0,4);
 const rejC=Object.entries(dna.rejCuisines).sort((a,b)=>b[1]-a[1]).slice(0,3);
 h+=`<div class="dna">`;
-if(topC.length){h+=`<div class="dp">🍽️ <b>Craves:</b> ${topC.map(([k,v])=>k+' <span style="color:var(--gold)">('+v+')</span>').join(', ')}</div>`}
-if(topV.length){h+=`<div class="dp">✨ <b>Vibes:</b> ${topV.map(([k,v])=>k+' <span style="color:var(--gold)">('+v+')</span>').join(', ')}</div>`}
+if(topC.length){h+=`<div class="dp"><b>Craves:</b> ${topC.map(([k,v])=>k+' <span style="color:var(--gold)">('+v+')</span>').join(', ')}</div>`}
+if(topV.length){h+=`<div class="dp"><b>Vibes:</b> ${topV.map(([k,v])=>k+' <span style="color:var(--gold)">('+v+')</span>').join(', ')}</div>`}
 basePillars.forEach(d=>{h+=`<div class="dp">${d}</div>`});
-if(rejC.length){h+=`<div class="dp" style="opacity:.5">🚫 <b>Avoids:</b> ${rejC.map(([k])=>k).join(', ')}</div>`}
+if(rejC.length){h+=`<div class="dp" style="opacity:.5"><b>Avoids:</b> ${rejC.map(([k])=>k).join(', ')}</div>`}
 h+=`</div>`;
 h+=`<div style="font-size:11px;color:var(--text-d);margin-top:6px">${dna.lovedCount} ♥ · ${dna.rejCount} ✕ — your taste evolves with every choice</div>`;
 }else{
@@ -417,24 +412,20 @@ h+=`<div style="font-size:11px;color:var(--text-d);margin-top:6px">♥ or ✕ ve
 }
 h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Wine Palate</div>`;
-if(cellarWines&&cellarWines.length>0){
+const wpWines=cellarWines||(CW?CW.map(w=>({name:w.n,region:w.r,country:w.c,grape:w.g,vintage:w.v,rating:w.t})):null);
+if(wpWines&&wpWines.length>0){
 const wg={},wc={},wr={};
-cellarWines.forEach(w=>{if(w.grape&&w.grape!=='Unknown'){wg[w.grape]=(wg[w.grape]||0)+1}if(w.country){wc[w.country]=(wc[w.country]||0)+1}if(w.region){wr[w.region]=(wr[w.region]||0)+1}});
+wpWines.forEach(w=>{if(w.grape&&w.grape!=='Unknown'){wg[w.grape]=(wg[w.grape]||0)+1}if(w.country){wc[w.country]=(wc[w.country]||0)+1}if(w.region){wr[w.region]=(wr[w.region]||0)+1}});
 const topG=Object.entries(wg).sort((a,b)=>b[1]-a[1]).slice(0,5);
 const topC=Object.entries(wc).sort((a,b)=>b[1]-a[1]).slice(0,4);
-const topR=Object.entries(wr).sort((a,b)=>b[1]-a[1]).slice(0,4);
-const fives=cellarWines.filter(w=>w.rating>=5).length;
-const avg=(cellarWines.reduce((s,w)=>s+w.rating,0)/cellarWines.length).toFixed(1);
-h+=`<div class="dna">`;
-topG.forEach(([g,n])=>{h+=`<div class="dp">🍇 ${g} <span style="color:var(--gold)">(${n})</span></div>`});
+const fives=wpWines.filter(w=>w.rating>=5).length;
+const avg=(wpWines.reduce((s,w)=>s+w.rating,0)/wpWines.length).toFixed(1);
+h+=`<div style="margin-bottom:8px">`;
+topG.forEach(([g,n])=>{h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px"><span style="color:var(--text-m)">${g}</span><span style="color:var(--gold);font-weight:600;font-size:12px">${n}</span></div>`});
 h+=`</div>`;
-h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">`;
-topC.forEach(([c,n])=>{h+=`<span style="background:var(--bg-card);border:1px solid var(--border-d);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text-m)">${FL[c]||'🍷'} ${c} (${n})</span>`});
-h+=`</div>`;
-h+=`<div style="margin-top:10px;font-size:12px;color:var(--text-d)">${cellarWines.length} wines · ${fives} perfect scores · ${avg} avg · ${Object.keys(wc).length} countries</div>`;
+h+=`<div style="font-size:12px;color:var(--text-d)">${wpWines.length} wines · ${fives} perfect scores · ${avg} avg · ${Object.keys(wc).length} countries</div>`;
 }else{
-if(!cellarWines&&!cellarLoading)loadCellar();
-h+=`<div style="font-size:12px;color:var(--text-d);padding:8px 0">Loading wine data...</div>`;
+h+=`<div style="font-size:12px;color:var(--text-d);padding:8px 0">Scan bottles to build your wine palate</div>`;
 }
 h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Passport · ${gTC()} countries</div>`;
