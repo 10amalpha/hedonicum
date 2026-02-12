@@ -309,6 +309,16 @@ S.scanResults={bottle:JSON.parse(c.substring(si,ei+1))}
 }catch(e){S.scanError='Error: '+e.message}
 S.scanLoading=false;S.scanPhase='';render()}
 
+async function saveBottle(){
+if(!S.scanResults?.bottle)return;
+const b=S.scanResults.bottle;
+const wine={name:b.name,region:b.region||null,country:b.country||null,grape:b.grape||null,vintage:b.vintage||null,rating:S.scanResults.bottleRating||4,reorder:S.scanResults.bottleReorder||null,source:'bottle_scan'};
+try{
+const r=await fetch(SB_URL+'/rest/v1/wines',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(wine)});
+if(r.ok){const[saved]=await r.json();if(cellarWines){cellarWines.unshift(saved);cellarWines.sort((a,b2)=>b2.rating-a.rating)}}
+}catch(e){if(cellarWines){cellarWines.unshift(wine);cellarWines.sort((a,b2)=>b2.rating-a.rating)}}
+S.toast='✓ '+b.name+' saved';scanReset()}
+
 function render(){
 const lc=Object.keys(S.loved).length,rc=Object.keys(S.rejected).length;let h='';
 if(S.toast)h+=`<div class="toast">${S.toast}</div>`;
@@ -316,10 +326,35 @@ const tabs=[{id:'profile',ic:'👤',l:'Profile'},{id:'discover',ic:'🔍',l:'Dis
 h+=`<nav class="nav">`;tabs.forEach(t=>{h+=`<button class="ni${S.tab===t.id?' on':''}" onclick="switchTab('${t.id}')"><span class="ni-ic">${t.ic}</span>${t.l}</button>`});h+=`</nav>`;
 
 if(S.tab==='profile'){
+if(!cellarWines&&!cellarLoading)loadCellar();
 h+=`<div class="hero"><h1>Hedonicum</h1><div class="sub">Taste Intelligence</div></div>`;
-h+=`<div class="identity"><div class="id-top"><div class="id-h">@Holdmybirra</div><div class="id-badge">Sommelier</div></div><div class="id-bio"><b>231 wines</b> across <b>12 countries</b>. <b>${gTV()} venues</b> across <b>${gTC()} countries</b>. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div></div>`;
-h+=`<div class="stats">`;[{n:'231',l:'Wines',g:1},{n:String(gTV()),l:'Venues'},{n:String(gTC()),l:'Countries',g:1},{n:'4.2',l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
+const wn=cellarWines?cellarWines.length:231;
+const wcn=cellarWines?new Set(cellarWines.map(w=>w.country).filter(Boolean)).size:12;
+const wavg=cellarWines&&cellarWines.length?(cellarWines.reduce((s,w)=>s+w.rating,0)/cellarWines.length).toFixed(1):'4.2';
+h+=`<div class="identity"><div class="id-top"><div class="id-h">@Holdmybirra</div><div class="id-badge">Sommelier</div></div><div class="id-bio"><b>${wn} wines</b> across <b>${wcn} countries</b>. <b>${gTV()} venues</b> across <b>${gTC()} countries</b>. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div></div>`;
+h+=`<div class="stats">`;[{n:String(wn),l:'Wines',g:1},{n:String(gTV()),l:'Venues'},{n:String(gTC()),l:'Countries',g:1},{n:wavg,l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Taste DNA</div><div class="dna">`;['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'].forEach(d=>{h+=`<div class="dp">${d}</div>`});h+=`</div></div>`;
+h+=`<div class="sec"><div class="sec-h">Wine Palate</div>`;
+if(cellarWines&&cellarWines.length>0){
+const wg={},wc={},wr={};
+cellarWines.forEach(w=>{if(w.grape&&w.grape!=='Unknown'){wg[w.grape]=(wg[w.grape]||0)+1}if(w.country){wc[w.country]=(wc[w.country]||0)+1}if(w.region){wr[w.region]=(wr[w.region]||0)+1}});
+const topG=Object.entries(wg).sort((a,b)=>b[1]-a[1]).slice(0,5);
+const topC=Object.entries(wc).sort((a,b)=>b[1]-a[1]).slice(0,4);
+const topR=Object.entries(wr).sort((a,b)=>b[1]-a[1]).slice(0,4);
+const fives=cellarWines.filter(w=>w.rating>=5).length;
+const avg=(cellarWines.reduce((s,w)=>s+w.rating,0)/cellarWines.length).toFixed(1);
+h+=`<div class="dna">`;
+topG.forEach(([g,n])=>{h+=`<div class="dp">🍇 ${g} <span style="color:var(--gold)">(${n})</span></div>`});
+h+=`</div>`;
+h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">`;
+topC.forEach(([c,n])=>{h+=`<span style="background:var(--bg-card);border:1px solid var(--border-d);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text-m)">${FL[c]||'🍷'} ${c} (${n})</span>`});
+h+=`</div>`;
+h+=`<div style="margin-top:10px;font-size:12px;color:var(--text-d)">${cellarWines.length} wines · ${fives} perfect scores · ${avg} avg · ${Object.keys(wc).length} countries</div>`;
+}else{
+if(!cellarWines&&!cellarLoading)loadCellar();
+h+=`<div style="font-size:12px;color:var(--text-d);padding:8px 0">Loading wine data...</div>`;
+}
+h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Passport · ${gTC()} countries</div>`;
 const pp=gPP();
 pp.forEach(x=>{const isOpen=ppOpen===x.n;const vs=VBC[x.n]||[];
@@ -391,6 +426,7 @@ h+=`<div style="text-align:center;margin-top:16px"><button class="go" style="bac
 }
 if(S.scanResults?.bottle){
 const b=S.scanResults.bottle;
+if(!S.scanResults.bottleRating){
 h+=`<div class="scan-bottle-card"><h3>${b.name}</h3>`;
 if(b.winery)h+=`<div class="sb-winery">${b.winery}</div>`;
 h+=`<div class="sb-detail">`;
@@ -399,9 +435,29 @@ if(b.grape)h+=`<br>🍇 ${b.grape}`;
 if(b.vintage)h+=`<br>📅 ${b.vintage}`;
 h+=`</div>`;
 if(b.notes)h+=`<p class="sb-notes">"${b.notes}"</p>`;
+h+=`<div style="margin-top:16px"><div style="font-size:12px;color:var(--text-d);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Rate it</div>`;
+h+=`<div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">`;
+[1,2,3,3.5,4,4.5,5].forEach(r=>{h+=`<button onclick="S.scanResults.bottleRating=${r};render()" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--gold-border);background:transparent;color:var(--gold);font-size:13px;font-weight:700;cursor:pointer">${r}</button>`});
 h+=`</div>`;
-h+=`<div style="text-align:center;margin-top:16px"><button class="go" style="background:transparent;color:var(--gold);border:1px solid var(--gold-border)" onclick="scanReset()">🍾 Scan Another Bottle</button></div>`;
+h+=`<div style="font-size:12px;color:var(--text-d);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Reorder?</div>`;
+h+=`<div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">`;
+['yes','maybe','no'].forEach(r=>{h+=`<button onclick="S.scanResults.bottleReorder='${r}';S.scanResults.bottleRating=S.scanResults.bottleRating||4;render()" style="padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-m);font-size:13px;cursor:pointer">${r==='yes'?'✓ Yes':r==='no'?'✗ No':'~ Maybe'}</button>`});
+h+=`</div></div>`;
+h+=`<div style="text-align:center;margin-top:12px"><button class="tbar-r" onclick="scanReset()">Cancel</button></div>`;
+}else{
+const rt=S.scanResults.bottleRating;
+const re=S.scanResults.bottleReorder||null;
+h+=`<div class="scan-bottle-card"><h3>${b.name}</h3>`;
+if(b.winery)h+=`<div class="sb-winery">${b.winery}</div>`;
+h+=`<div class="sb-detail">`;
+if(b.region)h+=`📍 ${b.region}${b.country?', '+b.country:''}`;
+if(b.grape)h+=`<br>🍇 ${b.grape}`;
+h+=`<br>⭐ ${rt} ${re?'· '+(re==='yes'?'✓ Reorder':re==='no'?'✗ Skip':'~ Maybe'):''}`;
+h+=`</div></div>`;
+h+=`<button class="go" onclick="saveBottle()">Save to Cellar</button>`;
+h+=`<div style="text-align:center;margin-top:12px"><button class="tbar-r" onclick="scanReset()">Cancel</button></div>`;
 }
+h+=`</div>`}
 h+=`</div>`}
 
 if(S.tab==='cellar'){
