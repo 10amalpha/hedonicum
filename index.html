@@ -231,10 +231,42 @@ function gTC(){const s=new Set();gPP().forEach(p=>s.add(p.n));return s.size}
 function sL(){localStorage.setItem('h-loved',JSON.stringify(S.loved))}
 function sR(){localStorage.setItem('h-rej',JSON.stringify(S.rejected))}
 function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';render()},2000)}
-function tLove(n){if(S.loved[n]){delete S.loved[n];toast('Removed')}else{S.loved[n]={city:S.city,t:Date.now()};toast('♥ Saved')}if(S.loved[n]&&S.rejected[n]){delete S.rejected[n];sR()}sL();render()}
-function tRej(n){if(S.rejected[n]){delete S.rejected[n];toast('Restored')}else{S.rejected[n]=true;toast('✕ Dismissed')}if(S.rejected[n]&&S.loved[n]){delete S.loved[n];sL()}sR();render()}
+function tLove(n,meta){if(S.loved[n]){delete S.loved[n];toast('Removed')}else{S.loved[n]={city:S.city,t:Date.now(),...(meta||{})};toast('♥ Saved')}if(S.loved[n]&&S.rejected[n]){delete S.rejected[n];sR()}sL();render()}
+function tRej(n,meta){if(S.rejected[n]){delete S.rejected[n];toast('Restored')}else{S.rejected[n]={city:S.city,t:Date.now(),...(meta||{})};toast('✕ Dismissed')}if(S.rejected[n]&&S.loved[n]){delete S.loved[n];sL()}sR();render()}
 function clr(){S.loved={};S.rejected={};localStorage.removeItem('h-loved');localStorage.removeItem('h-rej');toast('Reset');render()}
-function fb(){const l=Object.keys(S.loved),r=Object.keys(S.rejected);let c='';if(l.length)c+=`\n\nUSER-CONFIRMED LOVES:\n${l.map(n=>'  ♥ '+n).join('\n')}`;if(r.length)c+=`\n\nUSER-REJECTED (AVOID):\n${r.map(n=>'  ✕ '+n).join('\n')}`;return c}
+function tasteDNA(){
+const loved=Object.values(S.loved).filter(v=>typeof v==='object'&&v.cuisine);
+const rejected=Object.values(S.rejected).filter(v=>typeof v==='object'&&v.cuisine);
+const cuisines={},vibes={},prices={};
+loved.forEach(v=>{
+if(v.cuisine){v.cuisine.split(/[,\/&]+/).forEach(c=>{c=c.trim();if(c)cuisines[c]=(cuisines[c]||0)+1})}
+if(v.spirit){const words=v.spirit.toLowerCase();
+['soul','fire','grill','seafood','raw','wood','neighborhood','local','wine','authentic','rustic','casual','craft','intimate','traditional','family','market','seasonal'].forEach(w=>{if(words.includes(w))vibes[w]=(vibes[w]||0)+1})}
+if(v.price)prices[v.price]=(prices[v.price]||0)+1;
+});
+const rejCuisines={};
+rejected.forEach(v=>{if(v.cuisine){v.cuisine.split(/[,\/&]+/).forEach(c=>{c=c.trim();if(c)rejCuisines[c]=(rejCuisines[c]||0)+1})}});
+return{cuisines,vibes,prices,rejCuisines,lovedCount:loved.length,rejCount:rejected.length}}
+function fb(){
+const l=Object.entries(S.loved).filter(([n,v])=>typeof v==='object');
+const r=Object.entries(S.rejected).filter(([n,v])=>typeof v==='object');
+const dna=tasteDNA();
+let c='';
+if(l.length){
+c+='\n\nUSER-CONFIRMED LOVES ('+l.length+'):\n';
+l.forEach(([n,v])=>{c+='  ♥ '+n+(v.cuisine?' ['+v.cuisine+']':'')+(v.spirit?' — '+v.spirit:'')+'\n'});
+const topCuisines=Object.entries(dna.cuisines).sort((a,b)=>b[1]-a[1]).slice(0,5);
+if(topCuisines.length)c+='\nLEARNED CUISINE PREFERENCES: '+topCuisines.map(([k,v])=>k+' ('+v+'x)').join(', ');
+const topVibes=Object.entries(dna.vibes).sort((a,b)=>b[1]-a[1]).slice(0,6);
+if(topVibes.length)c+='\nLEARNED VIBE PREFERENCES: '+topVibes.map(([k,v])=>k+' ('+v+'x)').join(', ');
+}
+if(r.length){
+c+='\n\nUSER-REJECTED (AVOID '+r.length+'):\n';
+r.forEach(([n,v])=>{c+='  ✕ '+n+(v.cuisine?' ['+v.cuisine+']':'')+'\n'});
+const topRej=Object.entries(dna.rejCuisines).sort((a,b)=>b[1]-a[1]).slice(0,5);
+if(topRej.length)c+='\nAVOID THESE STYLES: '+topRej.map(([k,v])=>k+' ('+v+'x)').join(', ');
+}
+return c}
 function isLoved(n){return !!S.loved[n]}
 async function callAPI(sys,usr,mdl,srch){const b={system:sys,messages:[{role:'user',content:usr}],max_tokens:3000};if(mdl)b.model=mdl;if(srch)b.tools=[{type:'web_search_20250305',name:'web_search'}];const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return await r.json()}
 function txt(d){return(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n')}
@@ -337,7 +369,25 @@ const wcn=cellarWines?new Set(cellarWines.map(w=>w.country).filter(Boolean)).siz
 const wavg=cellarWines&&cellarWines.length?(cellarWines.reduce((s,w)=>s+w.rating,0)/cellarWines.length).toFixed(1):'4.2';
 h+=`<div class="identity"><div class="id-top"><div class="id-h">@Holdmybirra</div><div class="id-badge">Sommelier</div></div><div class="id-bio"><b>${wn} wines</b> across <b>${wcn} countries</b>. <b>${gTV()} venues</b> across <b>${gTC()} countries</b>. Tempranillo loyalist. Neighborhood over hype. Fire &amp; sea over foam &amp; tweezers.</div></div>`;
 h+=`<div class="stats">`;[{n:String(wn),l:'Wines',g:1},{n:String(gTV()),l:'Venues'},{n:String(gTC()),l:'Countries',g:1},{n:wavg,l:'Avg Score'}].forEach(s=>{h+=`<div class="st"><div class="st-n${s.g?' g':''}">${s.n}</div><div class="st-l">${s.l}</div></div>`});h+=`</div>`;
-h+=`<div class="sec"><div class="sec-h">Taste DNA</div><div class="dna">`;['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'].forEach(d=>{h+=`<div class="dp">${d}</div>`});h+=`</div></div>`;
+h+=`<div class="sec"><div class="sec-h">Taste DNA</div>`;
+const dna=tasteDNA();
+const basePillars=['🔥 Soul over concept','🐟 Fire & sea','🏘️ Neighborhood roots','🍷 Wine companion','🧑‍🍳 Ingredient-driven','🪑 Regulars\' place'];
+if(dna.lovedCount>=3){
+const topC=Object.entries(dna.cuisines).sort((a,b)=>b[1]-a[1]).slice(0,4);
+const topV=Object.entries(dna.vibes).sort((a,b)=>b[1]-a[1]).slice(0,4);
+const rejC=Object.entries(dna.rejCuisines).sort((a,b)=>b[1]-a[1]).slice(0,3);
+h+=`<div class="dna">`;
+if(topC.length){h+=`<div class="dp">🍽️ <b>Craves:</b> ${topC.map(([k,v])=>k+' <span style="color:var(--gold)">('+v+')</span>').join(', ')}</div>`}
+if(topV.length){h+=`<div class="dp">✨ <b>Vibes:</b> ${topV.map(([k,v])=>k+' <span style="color:var(--gold)">('+v+')</span>').join(', ')}</div>`}
+basePillars.forEach(d=>{h+=`<div class="dp">${d}</div>`});
+if(rejC.length){h+=`<div class="dp" style="opacity:.5">🚫 <b>Avoids:</b> ${rejC.map(([k])=>k).join(', ')}</div>`}
+h+=`</div>`;
+h+=`<div style="font-size:11px;color:var(--text-d);margin-top:6px">${dna.lovedCount} ♥ · ${dna.rejCount} ✕ — your taste evolves with every choice</div>`;
+}else{
+h+=`<div class="dna">`;basePillars.forEach(d=>{h+=`<div class="dp">${d}</div>`});h+=`</div>`;
+h+=`<div style="font-size:11px;color:var(--text-d);margin-top:6px">♥ or ✕ venues in Discover to build your taste profile</div>`;
+}
+h+=`</div>`;
 h+=`<div class="sec"><div class="sec-h">Wine Palate</div>`;
 if(cellarWines&&cellarWines.length>0){
 const wg={},wc={},wr={};
@@ -381,7 +431,7 @@ h+=`</div><button class="go" onclick="go()" ${S.loading?'disabled':''}>${S.loadi
 if((lc>0||rc>0)&&!S.loading){h+=`<div class="tbar"><div class="tbar-s">`;if(lc>0)h+=`<span class="lv">♥ ${lc}</span>`;if(lc>0&&rc>0)h+=' · ';if(rc>0)h+=`<span class="rj">✕ ${rc}</span>`;h+=`<span style="color:var(--text-l);margin-left:6px">shaping taste</span></div><button class="tbar-r" onclick="clr()">Reset</button></div>`}
 if(S.loading){h+=`<div class="ld"><div class="ld-t">${S.phase}</div>`;if(S.loc)h+=`<div class="ld-s">Near ${S.loc}</div>`;h+=`</div>`}
 if(S.error)h+=`<div class="err">${S.error}</div>`;
-if(S.results){h+=`<div class="cv"><p>${S.results.city_vibe}</p></div>`;S.results.restaurants.forEach((r,i)=>{const isL=isLoved(r.name),isR=S.rejected[r.name],en=esc(r.name);h+=`<div class="rc${isL?' lc':''}${isR?' xc':''}" style="animation:fadeUp .35s ease-out ${i*.04}s both"><div class="rc-top"><div class="rc-i"><div class="rc-nr"><a href="${maps(r)}" target="_blank" class="rc-nm">${r.name}</a><span class="rc-cu">${r.cuisine}</span>`;if(r.price)h+=`<span class="rc-pr">${r.price}</span>`;h+=`</div><div class="rc-loc">${r.neighborhood}${r.walk?`<span style="color:var(--text-d);margin-left:5px">· ${r.walk}</span>`:''}</div></div><div class="rc-act"><button class="ab${isR?' xo':''}" onclick="tRej('${en}')">✕</button><div class="rc-sc"><div class="sn ${sc(r.score)}">${r.score}</div></div><button class="ab${isL?' lo':''}" onclick="tLove('${en}')">♥</button></div></div><p class="rc-sp">${r.spirit}</p><a href="${maps(r)}" target="_blank" class="rc-mp">→ Maps</a></div>`});h+=`<div class="rf">Web-verified · Pattern-matched · ♥ ✕ train your taste</div>`}
+if(S.results){h+=`<div class="cv"><p>${S.results.city_vibe}</p></div>`;S.results.restaurants.forEach((r,i)=>{const isL=isLoved(r.name),isR=S.rejected[r.name],en=esc(r.name),meta=JSON.stringify({cuisine:r.cuisine,price:r.price,score:r.score,spirit:r.spirit,hood:r.neighborhood}).replace(/'/g,'&#39;');h+=`<div class="rc${isL?' lc':''}${isR?' xc':''}" style="animation:fadeUp .35s ease-out ${i*.04}s both"><div class="rc-top"><div class="rc-i"><div class="rc-nr"><a href="${maps(r)}" target="_blank" class="rc-nm">${r.name}</a><span class="rc-cu">${r.cuisine}</span>`;if(r.price)h+=`<span class="rc-pr">${r.price}</span>`;h+=`</div><div class="rc-loc">${r.neighborhood}${r.walk?`<span style="color:var(--text-d);margin-left:5px">· ${r.walk}</span>`:''}</div></div><div class="rc-act"><button class="ab${isR?' xo':''}" onclick="tRej('${en}',${meta})">✕</button><div class="rc-sc"><div class="sn ${sc(r.score)}">${r.score}</div></div><button class="ab${isL?' lo':''}" onclick="tLove('${en}',${meta})">♥</button></div></div><p class="rc-sp">${r.spirit}</p><a href="${maps(r)}" target="_blank" class="rc-mp">→ Maps</a></div>`});h+=`<div class="rf">Web-verified · Pattern-matched · ♥ ✕ train your taste</div>`}
 if(!S.loading&&!S.results&&!S.error){h+=`<div class="es"><p>Not where you've been.<br>Where you should go.</p><div class="cp">`;['Tokyo','Lisbon','Buenos Aires','Copenhagen','El Retiro','Barcelona','CDMX','Berlin'].forEach(c=>{h+=`<button class="cpl" onclick="S.city='${c}';render();document.getElementById('ci').value='${c}'">${c}</button>`});h+=`</div></div>`}
 h+=`</div>`}
 
