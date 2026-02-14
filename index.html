@@ -19,6 +19,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 @keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes cardDismiss{0%{opacity:1;transform:translateX(0);max-height:200px;margin-bottom:8px;padding:16px}60%{opacity:0;transform:translateX(-80px)}100%{opacity:0;transform:translateX(-80px);max-height:0;margin-bottom:0;padding:0;border-width:0;overflow:hidden}}
+@keyframes heartPop{0%{transform:scale(1)}30%{transform:scale(1.4)}60%{transform:scale(.95)}100%{transform:scale(1)}}
 .app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;position:relative;padding-bottom:80px}
 .toast{position:fixed;top:env(safe-area-inset-top,12px);left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border);color:var(--text-d);padding:10px 24px;border-radius:12px;font-size:13px;z-index:99;animation:fadeIn .2s;backdrop-filter:blur(8px)}
 .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(10,14,23,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border-d);z-index:50;display:flex;padding:6px 0;padding-bottom:max(6px,env(safe-area-inset-bottom))}
@@ -66,13 +68,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .go{width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:12px;padding:14px;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:14px}
 .go:active{transform:scale(.97);opacity:.9}.go:disabled{opacity:.5;cursor:wait}
 .tbar{display:flex;justify-content:space-between;align-items:center;padding:6px 0;margin-bottom:10px}
-.tbar-s{font-size:11px;color:var(--text-d)}.tbar-s .lv{color:var(--green)}.tbar-s .rj{color:var(--red)}
+.tbar-s{font-size:11px;color:var(--text-d)}.tbar-s .lv{color:#e53e3e}.tbar-s .rj{color:var(--text-d)}
 .tbar-r{background:transparent;border:none;color:var(--text-d);font-size:10px;cursor:pointer;font-family:var(--font);padding:4px 8px;border-radius:6px}
 .ld{text-align:center;padding:48px 0;animation:pulse 2s ease-in-out infinite}.ld-t{font-size:15px;font-weight:600;color:var(--text-d)}.ld-s{color:var(--text-l);font-size:12px;margin-top:6px}
 .err{color:var(--red);text-align:center;padding:20px;font-size:14px}
 .cv{background:var(--bg-card);border-radius:16px;padding:18px;margin-bottom:14px;border-left:3px solid var(--gold-border)}.cv p{color:var(--text-m);font-size:13px;line-height:1.7}
 .rc{background:var(--bg-card);border:1px solid var(--border-d);border-radius:14px;padding:16px;margin-bottom:8px;transition:all .3s;position:relative}
-.rc.lc{border-color:rgba(72,187,120,.3)}.rc.xc{opacity:.12;max-height:0;padding:0!important;margin:0!important;overflow:hidden;border:none}
+.rc.lc{border-color:rgba(229,62,62,.35);background:rgba(229,62,62,.04)}.rc.xc{animation:cardDismiss .45s ease-out forwards;pointer-events:none}
 .rc-top{display:flex;justify-content:space-between;align-items:flex-start}.rc-i{flex:1;min-width:0}
 .rc-nr{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .rc-nm{font-size:15px;font-weight:700;color:var(--text);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;display:block}
@@ -80,7 +82,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .rc-loc{color:var(--text-l);font-size:11px;margin-top:3px}
 .rc-act{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .ab{background:transparent;border:1px solid var(--border-d);border-radius:10px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;color:var(--text-d)}
-.ab:active{transform:scale(.9)}.ab.lo{background:var(--green-d);border-color:rgba(72,187,120,.3);color:var(--green)}.ab.xo{background:var(--red-d);border-color:rgba(229,62,62,.2);color:var(--red)}
+.ab:active{transform:scale(.9)}.ab.lo{background:rgba(229,62,62,.15);border-color:rgba(229,62,62,.4);color:#e53e3e;animation:heartPop .35s ease-out}.ab.xo{background:var(--red-d);border-color:rgba(229,62,62,.2);color:var(--red)}
 .rc-sc{text-align:center;min-width:34px}.sn{font-size:26px;font-weight:800;line-height:1}
 .s9{color:var(--gold)}.s7{color:#b8956a}.s5{color:var(--text-d)}.sl{color:var(--text-l)}
 .rc-sp{color:var(--text-m);font-size:12px;line-height:1.5;margin-top:8px}
@@ -450,7 +452,7 @@ h+=`</div><button class="go" onclick="go()" ${S.loading?'disabled':''}>${S.loadi
 if((lc>0||rc>0)&&!S.loading){h+=`<div class="tbar"><div class="tbar-s">`;if(lc>0)h+=`<span class="lv">♥ ${lc}</span>`;if(lc>0&&rc>0)h+=' · ';if(rc>0)h+=`<span class="rj">✕ ${rc}</span>`;h+=`<span style="color:var(--text-l);margin-left:6px">shaping taste</span></div><button class="tbar-r" onclick="clr()">Reset</button></div>`}
 if(S.loading){h+=`<div class="ld"><div class="ld-t">${S.phase}</div>`;if(S.loc)h+=`<div class="ld-s">Near ${S.loc}</div>`;h+=`</div>`}
 if(S.error)h+=`<div class="err">${S.error}</div>`;
-if(S.results){h+=`<div class="cv"><p>${S.results.city_vibe}</p></div>`;S.results.restaurants.forEach((r,i)=>{const isL=isLoved(r.name),isR=S.rejected[r.name],en=esc(r.name),meta=JSON.stringify({cuisine:r.cuisine,price:r.price,score:r.score,spirit:r.spirit,hood:r.neighborhood}).replace(/'/g,'&#39;');h+=`<div class="rc${isL?' lc':''}${isR?' xc':''}" style="animation:fadeUp .35s ease-out ${i*.04}s both"><div class="rc-top"><div class="rc-i"><div class="rc-nr"><a href="${maps(r)}" target="_blank" class="rc-nm">${r.name}</a><span class="rc-cu">${r.cuisine}</span>`;if(r.price)h+=`<span class="rc-pr">${r.price}</span>`;h+=`</div><div class="rc-loc">${r.neighborhood}${r.walk?`<span style="color:var(--text-d);margin-left:5px">· ${r.walk}</span>`:''}</div></div><div class="rc-act"><button class="ab${isR?' xo':''}" onclick="tRej('${en}',${meta})">✕</button><div class="rc-sc"><div class="sn ${sc(r.score)}">${r.score}</div></div><button class="ab${isL?' lo':''}" onclick="tLove('${en}',${meta})">♥</button></div></div><p class="rc-sp">${r.spirit}</p><a href="${maps(r)}" target="_blank" class="rc-mp">→ Maps</a></div>`});h+=`<div class="rf">Web-verified · Pattern-matched · ♥ ✕ train your taste</div>`}
+if(S.results){window._rm=[];h+=`<div class="cv"><p>${S.results.city_vibe}</p></div>`;S.results.restaurants.forEach((r,i)=>{const isL=isLoved(r.name),isR=S.rejected[r.name],en=esc(r.name);window._rm[i]={cuisine:r.cuisine,price:r.price,score:r.score,spirit:r.spirit,hood:r.neighborhood};h+=`<div class="rc${isL?' lc':''}${isR?' xc':''}" style="animation:fadeUp .35s ease-out ${i*.04}s both"><div class="rc-top"><div class="rc-i"><div class="rc-nr"><a href="${maps(r)}" target="_blank" class="rc-nm">${r.name}</a><span class="rc-cu">${r.cuisine}</span>`;if(r.price)h+=`<span class="rc-pr">${r.price}</span>`;h+=`</div><div class="rc-loc">${r.neighborhood}${r.walk?`<span style="color:var(--text-d);margin-left:5px">· ${r.walk}</span>`:''}</div></div><div class="rc-act"><button class="ab${isR?' xo':''}" onclick="tRej('${en}',window._rm[${i}])">✕</button><div class="rc-sc"><div class="sn ${sc(r.score)}">${r.score}</div></div><button class="ab${isL?' lo':''}" onclick="tLove('${en}',window._rm[${i}])">♥</button></div></div><p class="rc-sp">${r.spirit}</p><a href="${maps(r)}" target="_blank" class="rc-mp">→ Maps</a></div>`});h+=`<div class="rf">Web-verified · Pattern-matched · ♥ ✕ train your taste</div>`}
 if(!S.loading&&!S.results&&!S.error){h+=`<div class="es"><p>Not where you've been.<br>Where you should go.</p><div class="cp">`;['Tokyo','Lisbon','Buenos Aires','Copenhagen','El Retiro','Barcelona','CDMX','Berlin'].forEach(c=>{h+=`<button class="cpl" onclick="S.city='${c}';render();document.getElementById('ci').value='${c}'">${c}</button>`});h+=`</div></div>`}
 h+=`</div>`}
 
