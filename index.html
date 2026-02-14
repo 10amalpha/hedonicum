@@ -185,6 +185,37 @@ scanMode:null,scanPhotos:[],scanLoading:false,scanPhase:'',scanResults:null,scan
 try{S.loved=JSON.parse(localStorage.getItem('h-loved')||'{}')}catch{}
 try{S.rejected=JSON.parse(localStorage.getItem('h-rej')||'{}')}catch{}
 
+async function loadFeedback(){
+try{
+const r=await fetch(SB_URL+'/rest/v1/venue_feedback?select=*&order=created_at.desc',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+if(r.ok){const rows=await r.json();if(Array.isArray(rows)){
+S.loved={};S.rejected={};
+rows.forEach(row=>{
+const meta={city:row.city,cuisine:row.cuisine,price:row.price,score:row.score,spirit:row.spirit,hood:row.neighborhood,t:new Date(row.created_at).getTime(),_id:row.id};
+if(row.feedback==='loved')S.loved[row.name]=meta;
+else S.rejected[row.name]=meta;
+});
+localStorage.setItem('h-loved',JSON.stringify(S.loved));
+localStorage.setItem('h-rej',JSON.stringify(S.rejected));
+render();
+}}
+}catch(e){console.log('Feedback load fallback to localStorage',e)}}
+loadFeedback();
+
+async function fbUpsert(name,meta,type){
+try{
+// Delete any existing row for this name first
+await fetch(SB_URL+'/rest/v1/venue_feedback?name=eq.'+encodeURIComponent(name),{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+// Insert new
+const row={name,city:meta.city||null,cuisine:meta.cuisine||null,price:meta.price||null,score:meta.score||null,spirit:meta.spirit||null,neighborhood:meta.hood||null,feedback:type};
+const r=await fetch(SB_URL+'/rest/v1/venue_feedback',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(row)});
+if(r.ok){const[saved]=await r.json();return saved}
+}catch(e){console.log('Feedback save error',e)}return null}
+
+async function fbDelete(name){
+try{await fetch(SB_URL+'/rest/v1/venue_feedback?name=eq.'+encodeURIComponent(name),{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})}catch(e){}}
+
+
 const BASE={venues:1340,countries:31,wines:231,avg:'4.2'};
 const BASE_PP=[{f:'🇺🇸',n:'USA',c:265},{f:'🇪🇸',n:'Spain',c:208},{f:'🇨🇴',n:'Colombia',c:131},{f:'🇮🇹',n:'Italy',c:131},{f:'🇫🇷',n:'France',c:63},{f:'🇲🇽',n:'Mexico',c:60},{f:'🇬🇧',n:'UK',c:51},{f:'🇯🇵',n:'Japan',c:41},{f:'🇹🇭',n:'Thailand',c:41},{f:'🇵🇹',n:'Portugal',c:40}];
 const CC={'Tokyo':'🇯🇵 Japan','Kyoto':'🇯🇵 Japan','Osaka':'🇯🇵 Japan','Lisbon':'🇵🇹 Portugal','Porto':'🇵🇹 Portugal','Buenos Aires':'🇦🇷 Argentina','Copenhagen':'🇩🇰 Denmark','Barcelona':'🇪🇸 Spain','Madrid':'🇪🇸 Spain','El Retiro':'🇪🇸 Spain','Sevilla':'🇪🇸 Spain','CDMX':'🇲🇽 Mexico','Berlin':'🇩🇪 Germany','Munich':'🇩🇪 Germany','Paris':'🇫🇷 France','Lyon':'🇫🇷 France','Rome':'🇮🇹 Italy','Milan':'🇮🇹 Italy','Florence':'🇮🇹 Italy','Naples':'🇮🇹 Italy','London':'🇬🇧 UK','Lima':'🇵🇪 Peru','Montevideo':'🇺🇾 Uruguay','Medellín':'🇨🇴 Colombia','Bogotá':'🇨🇴 Colombia','Cartagena':'🇨🇴 Colombia','San Francisco':'🇺🇸 USA','New York':'🇺🇸 USA','Los Angeles':'🇺🇸 USA','Bangkok':'🇹🇭 Thailand','Seoul':'🇰🇷 South Korea','Singapore':'🇸🇬 Singapore','Sydney':'🇦🇺 Australia','Amsterdam':'🇳🇱 Netherlands','Prague':'🇨🇿 Czechia','Vienna':'🇦🇹 Austria','Istanbul':'🇹🇷 Turkey','Dublin':'🇮🇪 Ireland','Stockholm':'🇸🇪 Sweden','Athens':'🇬🇷 Greece','Split':'🇭🇷 Croatia'};
@@ -233,9 +264,19 @@ function gTC(){const s=new Set();gPP().forEach(p=>s.add(p.n));return s.size}
 function sL(){localStorage.setItem('h-loved',JSON.stringify(S.loved))}
 function sR(){localStorage.setItem('h-rej',JSON.stringify(S.rejected))}
 function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';render()},2000)}
-function tLove(n,meta){if(S.loved[n]){delete S.loved[n];toast('Removed')}else{S.loved[n]={city:S.city,t:Date.now(),...(meta||{})};toast('♥ Saved')}if(S.loved[n]&&S.rejected[n]){delete S.rejected[n];sR()}sL();render()}
-function tRej(n,meta){if(S.rejected[n]){delete S.rejected[n];toast('Restored')}else{S.rejected[n]={city:S.city,t:Date.now(),...(meta||{})};toast('✕ Dismissed')}if(S.rejected[n]&&S.loved[n]){delete S.loved[n];sL()}sR();render()}
-function clr(){S.loved={};S.rejected={};localStorage.removeItem('h-loved');localStorage.removeItem('h-rej');toast('Reset');render()}
+function tLove(n,meta){
+if(S.loved[n]){delete S.loved[n];fbDelete(n);toast('Removed')}
+else{S.loved[n]={city:S.city,t:Date.now(),...(meta||{})};fbUpsert(n,S.loved[n],'loved');toast('♥ Saved')}
+if(S.loved[n]&&S.rejected[n]){delete S.rejected[n];sR()}
+sL();render()}
+function tRej(n,meta){
+if(S.rejected[n]){delete S.rejected[n];fbDelete(n);toast('Restored')}
+else{S.rejected[n]={city:S.city,t:Date.now(),...(meta||{})};fbUpsert(n,S.rejected[n],'rejected');toast('✕ Dismissed')}
+if(S.rejected[n]&&S.loved[n]){delete S.loved[n];sL()}
+sR();render()}
+async function clr(){S.loved={};S.rejected={};localStorage.removeItem('h-loved');localStorage.removeItem('h-rej');
+try{await fetch(SB_URL+'/rest/v1/venue_feedback',{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body:'{}'})}catch{}
+toast('Reset');render()}
 function tasteDNA(){
 const loved=Object.values(S.loved).filter(v=>typeof v==='object'&&v.cuisine);
 const rejected=Object.values(S.rejected).filter(v=>typeof v==='object'&&v.cuisine);
