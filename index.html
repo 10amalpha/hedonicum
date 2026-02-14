@@ -265,15 +265,25 @@ function sL(){localStorage.setItem('h-loved',JSON.stringify(S.loved))}
 function sR(){localStorage.setItem('h-rej',JSON.stringify(S.rejected))}
 function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';render()},2000)}
 function tLove(n,meta){
-if(S.loved[n]){delete S.loved[n];fbDelete(n);toast('Removed')}
-else{S.loved[n]={city:S.city,t:Date.now(),...(meta||{})};fbUpsert(n,S.loved[n],'loved');toast('♥ Saved')}
-if(S.loved[n]&&S.rejected[n]){delete S.rejected[n];sR()}
-sL();render()}
+if(S.loved[n]){delete S.loved[n];fbDelete(n);toast('Removed');sL();render();return}
+S.loved[n]={city:S.city,t:Date.now(),...(meta||{})};fbUpsert(n,S.loved[n],'loved');
+if(S.rejected[n]){delete S.rejected[n];sR()}
+sL();
+// Animate heart on existing card before re-render
+const cards=document.querySelectorAll('.rc');
+cards.forEach(c=>{if(c.querySelector('.rc-nm')?.textContent===n){c.classList.add('lc');const btn=c.querySelector('.ab:last-of-type');if(btn)btn.classList.add('lo')}});
+toast('♥ Saved');
+setTimeout(()=>render(),350)}
 function tRej(n,meta){
-if(S.rejected[n]){delete S.rejected[n];fbDelete(n);toast('Restored')}
-else{S.rejected[n]={city:S.city,t:Date.now(),...(meta||{})};fbUpsert(n,S.rejected[n],'rejected');toast('✕ Dismissed')}
-if(S.rejected[n]&&S.loved[n]){delete S.loved[n];sL()}
-sR();render()}
+if(S.rejected[n]){delete S.rejected[n];fbDelete(n);toast('Restored');sR();render();return}
+S.rejected[n]={city:S.city,t:Date.now(),...(meta||{})};fbUpsert(n,S.rejected[n],'rejected');
+if(S.loved[n]){delete S.loved[n];sL()}
+sR();
+// Animate dismiss on existing card, then re-render
+const cards=document.querySelectorAll('.rc');
+cards.forEach(c=>{if(c.querySelector('.rc-nm')?.textContent===n)c.classList.add('xc')});
+toast('✕ Dismissed');
+setTimeout(()=>render(),500)}
 async function clr(){S.loved={};S.rejected={};localStorage.removeItem('h-loved');localStorage.removeItem('h-rej');
 try{await fetch(SB_URL+'/rest/v1/venue_feedback',{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body:'{}'})}catch{}
 toast('Reset');render()}
